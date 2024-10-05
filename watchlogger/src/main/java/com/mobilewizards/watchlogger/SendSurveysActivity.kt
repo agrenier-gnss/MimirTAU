@@ -25,13 +25,14 @@ import java.io.FileReader
 private const val VERSION_TAG = "Version: "
 private const val COMMENT_START = "# "
 
-class SendSurveysActivity : Activity() {
+
+class SendSurveysActivity: Activity() {
 
     private lateinit var binding: ActivitySendSurveysBinding
     private val TAG = "watchLogger"
     private val CSV_FILE_CHANNEL_PATH = MediaStore.Downloads.EXTERNAL_CONTENT_URI
     private var filePaths = mutableListOf<File>()
-    private var fileSendOk : Boolean = true
+    private var fileSendOk: Boolean = true
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -42,44 +43,39 @@ class SendSurveysActivity : Activity() {
         val toPhoneBtn = findViewById<Button>(R.id.SendToPhoneBtn)
         val toDriveBtn = findViewById<Button>(R.id.SendToDrive)
 
-        WatchActivityHandler.getFilePaths().forEach{ path ->
+        WatchActivityHandler.getFilePaths().forEach { path ->
             filePaths.add(path)
         }
 
-        toPhoneBtn.setOnClickListener{
+        toPhoneBtn.setOnClickListener {
             sendFiles()
         }
 
-        toDriveBtn.setOnClickListener{
+        toDriveBtn.setOnClickListener {
             //
         }
     }
 
-    private fun fileSendSuccessful(){
-        if (fileSendOk != true){
-            fileSendOk = true
-        }
+    private fun fileSendSuccessful() {
+        fileSendOk = true
         WatchActivityHandler.fileSendStatus(fileSendOk)
         val openSendInfo = Intent(applicationContext, FileSendActivity::class.java)
         startActivity(openSendInfo)
     }
 
-    private fun fileSendTerminated(){
-        if (fileSendOk != false){
-            fileSendOk = false
-        }
-
+    private fun fileSendTerminated() {
+        fileSendOk = false
         WatchActivityHandler.fileSendStatus(fileSendOk)
         val openSendInfo = Intent(applicationContext, FileSendActivity::class.java)
         startActivity(openSendInfo)
     }
 
-    @SuppressLint("Range", "SimpleDateFormat")
-    fun sendFiles(){
+    @SuppressLint("SimpleDateFormat")
+    private fun sendFiles() {
         getPhoneNodeId { nodeIds ->
             Log.d(TAG, "Received nodeIds: $nodeIds")
             // Check if there are connected nodes
-            var connectedNode: String = if (nodeIds.size > 0) nodeIds[0] else ""
+            val connectedNode: String = if (nodeIds.size > 0) nodeIds[0] else ""
 
             if (connectedNode.isEmpty()) {
                 Log.d(TAG, "no nodes found")
@@ -88,7 +84,10 @@ class SendSurveysActivity : Activity() {
                 Log.d(TAG, "nodes found, sending")
 
                 val contentValues = ContentValues().apply {
-                    put(MediaStore.Downloads.DISPLAY_NAME, "log_watch_${SimpleDateFormat("ddMMyyyy_hhmmssSSS").format(startTime)}.csv")
+                    put(
+                        MediaStore.Downloads.DISPLAY_NAME,
+                        "log_watch_${SimpleDateFormat("ddMMyyyy_hhmmssSSS").format(startTime)}.csv"
+                    )
                     put(MediaStore.Downloads.MIME_TYPE, "text/csv")
                     put(MediaStore.Downloads.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
                 }
@@ -102,23 +101,22 @@ class SendSurveysActivity : Activity() {
                         outputStream.write("log_watch_${SimpleDateFormat("ddMMyyyy_hhmmssSSS").format(startTime)}.csv\n".toByteArray())
                         outputStream.write(COMMENT_START.toByteArray())
                         outputStream.write("\n".toByteArray())
-                        outputStream.write(COMMENT_START.toByteArray());
-                        outputStream.write("Header Description:".toByteArray());
+                        outputStream.write(COMMENT_START.toByteArray())
+                        outputStream.write("Header Description:".toByteArray())
                         outputStream.write("\n".toByteArray())
                         outputStream.write(COMMENT_START.toByteArray())
                         outputStream.write("\n".toByteArray())
                         outputStream.write(COMMENT_START.toByteArray())
                         outputStream.write(VERSION_TAG.toByteArray())
-                        var manufacturer: String = Build.MANUFACTURER
-                        var model: String = Build.MODEL
-                        var fileVersion: String = "${BuildConfig.VERSION_CODE}" + " Platform: " +
-                                "${Build.VERSION.RELEASE}" + " " + "Manufacturer: "+
-                                "${manufacturer}" + " " + "Model: " + "${model}"
-
+                        val manufacturer: String = Build.MANUFACTURER
+                        val model: String = Build.MODEL
+                        val fileVersion =
+                            "${BuildConfig.VERSION_CODE} Platform: ${Build.VERSION.RELEASE} Manufacturer: $manufacturer Model: $model"
                         outputStream.write(fileVersion.toByteArray())
                         outputStream.write("\n".toByteArray())
                         outputStream.write(COMMENT_START.toByteArray())
                         outputStream.write("\n".toByteArray())
+
                         WatchActivityHandler.getFilePaths().forEach { file ->
 
                             val reader = BufferedReader(FileReader(file))
@@ -139,9 +137,14 @@ class SendSurveysActivity : Activity() {
                         val cursor = contentResolver.query(mediaUri, null, null, null, null)
                         cursor?.use { c ->
                             if (c.moveToFirst()) {
-                                path = c.getString(c.getColumnIndex(MediaStore.Images.Media.DATA))
-                                // Use the file path as needed
-                                Log.d("File path", path)
+                                val columnIndex = c.getColumnIndex(MediaStore.Images.Media.DATA)
+                                if (columnIndex >= 0) {
+                                    path = c.getString(columnIndex)
+                                    // Use the file path as needed
+                                    Log.d("File path", path)
+                                } else {
+                                    Log.e("Error", "Column MediaStore.Images.Media.DATA not found.")
+                                }
                             }
                         }
                     }
@@ -152,7 +155,7 @@ class SendSurveysActivity : Activity() {
     }
 
     private fun getPhoneNodeId(callback: (ArrayList<String>) -> Unit) {
-        var nodeIds = ArrayList<String>()
+        val nodeIds = ArrayList<String>()
         Wearable.getNodeClient(this).connectedNodes.addOnSuccessListener { nodes ->
             for (node in nodes) {
                 Log.d(TAG, "connected node in getPhoneId " + node.id)
@@ -162,7 +165,7 @@ class SendSurveysActivity : Activity() {
         }
     }
 
-    private fun sendCsvFileToPhone(csvFile: File,nodeId: String, context: Context) {
+    private fun sendCsvFileToPhone(csvFile: File, nodeId: String, context: Context) {
         Log.d(TAG, "in sendCsvFileToPhone " + csvFile.name)
         // Checks if the file is found and read
         try {
@@ -179,7 +182,7 @@ class SendSurveysActivity : Activity() {
 
         // Getting channelClient for sending the file
         val channelClient = Wearable.getChannelClient(context)
-        val callback = object : ChannelClient.ChannelCallback() {
+        val callback = object: ChannelClient.ChannelCallback() {
             override fun onChannelOpened(channel: ChannelClient.Channel) {
                 Log.d(TAG, "onChannelOpened " + channel.nodeId)
                 // Send the CSV file to the phone
@@ -198,13 +201,10 @@ class SendSurveysActivity : Activity() {
             }
 
             override fun onChannelClosed(
-                channel: ChannelClient.Channel,
-                closeReason: Int,
-                appSpecificErrorCode: Int
+                channel: ChannelClient.Channel, closeReason: Int, appSpecificErrorCode: Int
             ) {
                 Log.d(
-                    TAG,
-                    "Channel closed: nodeId=$nodeId, reason=$closeReason, errorCode=$appSpecificErrorCode"
+                    TAG, "Channel closed: nodeId=$nodeId, reason=$closeReason, errorCode=$appSpecificErrorCode"
                 )
                 Wearable.getChannelClient(applicationContext).close(channel)
             }
@@ -212,17 +212,15 @@ class SendSurveysActivity : Activity() {
 
         channelClient.registerChannelCallback(callback)
         channelClient.openChannel(
-            nodeId,
-            CSV_FILE_CHANNEL_PATH.toString()
+            nodeId, CSV_FILE_CHANNEL_PATH.toString()
         ).addOnCompleteListener { result ->
             Log.d(TAG, result.toString())
             if (result.isSuccessful) {
                 Log.d(TAG, "Channel opened: nodeId=$nodeId, path=$CSV_FILE_CHANNEL_PATH")
-                callback.onChannelOpened(result.result )
+                callback.onChannelOpened(result.result)
             } else {
                 Log.e(
-                    TAG,
-                    "Failed to open channel: nodeId=$nodeId, path=$CSV_FILE_CHANNEL_PATH"
+                    TAG, "Failed to open channel: nodeId=$nodeId, path=$CSV_FILE_CHANNEL_PATH"
                 )
                 channelClient.unregisterChannelCallback(callback)
             }

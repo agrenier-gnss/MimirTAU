@@ -10,7 +10,7 @@ import android.widget.Button
 import androidx.core.app.ActivityCompat
 import com.mobilewizards.logging_app.databinding.ActivitySelectionBinding
 
-class SelectionActivity : Activity() {
+class SelectionActivity: Activity() {
 
     private lateinit var binding: ActivitySelectionBinding
 
@@ -18,7 +18,6 @@ class SelectionActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
         binding = ActivitySelectionBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
@@ -27,11 +26,11 @@ class SelectionActivity : Activity() {
         val startSurveyBtn = findViewById<Button>(R.id.startSurveyBtn)
         val settingsBtn = findViewById<Button>(R.id.settingsBtn)
 
-        startSurveyBtn.setOnClickListener{
+        startSurveyBtn.setOnClickListener {
             launchSettingsActivity()
         }
 
-        settingsBtn.setOnClickListener{
+        settingsBtn.setOnClickListener {
             val openSettings = Intent(applicationContext, SettingsActivity::class.java)
             startActivity(openSettings)
         }
@@ -71,7 +70,8 @@ class SelectionActivity : Activity() {
 
     // =============================================================================================
 
-    fun checkPermissions() {
+    // Makes sure all permissions are granted
+    private fun checkPermissions() {
         val permissions = arrayOf(
             Manifest.permission.ACCESS_FINE_LOCATION,
             Manifest.permission.ACCESS_COARSE_LOCATION,

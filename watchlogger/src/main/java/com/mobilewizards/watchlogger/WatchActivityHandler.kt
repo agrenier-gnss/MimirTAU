@@ -7,12 +7,12 @@ object WatchActivityHandler {
 
     // Variable to save the files for sending
     private var filepaths = mutableListOf<File>()
-    var fileSendOk : Boolean = false
+    private var fileSendOk: Boolean = false
     var sensorsSelected = mutableMapOf<SensorType, Pair<Boolean, Int>>()
 
     // ---------------------------------------------------------------------------------------------
 
-    fun fileSendStatus(fileSend: Boolean){
+    fun fileSendStatus(fileSend: Boolean) {
         fileSendOk = fileSend
     }
 

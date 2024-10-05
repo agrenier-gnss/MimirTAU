@@ -7,7 +7,7 @@ import android.os.Handler
 import android.os.Looper
 import com.mobilewizards.logging_app.databinding.ActivityLoadingScreenBinding
 
-class LoadingScreenActivity : Activity() {
+class LoadingScreenActivity: Activity() {
 
     private lateinit var binding: ActivityLoadingScreenBinding
 
