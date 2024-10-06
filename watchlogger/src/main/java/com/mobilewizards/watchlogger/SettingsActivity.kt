@@ -1,7 +1,5 @@
 package com.mobilewizards.logging_app
 
-import android.annotation.SuppressLint
-
 import android.app.Activity
 import android.content.Context
 import android.content.SharedPreferences
@@ -52,15 +50,15 @@ class SettingsActivity: Activity() {
             editor.apply()
         }
 
-        // Load from shared preferences
+        // Load Initialisation values from sharedPreferences to the sensors
         val sensorsInit = mapOf(
-            SensorType.TYPE_GNSS to loadMutableList("GNSS"),
-            SensorType.TYPE_IMU to loadMutableList("IMU"),
-            SensorType.TYPE_PRESSURE to loadMutableList("PSR"),
-            SensorType.TYPE_STEPS to loadMutableList("STEPS"),
-            SensorType.TYPE_SPECIFIC_ECG to loadMutableList("ECG"),
-            SensorType.TYPE_SPECIFIC_PPG to loadMutableList("PPG"),
-            SensorType.TYPE_SPECIFIC_GSR to loadMutableList("GSR")
+            SensorType.TYPE_GNSS to loadSharedPreference("GNSS"),
+            SensorType.TYPE_IMU to loadSharedPreference("IMU"),
+            SensorType.TYPE_PRESSURE to loadSharedPreference("PSR"),
+            SensorType.TYPE_STEPS to loadSharedPreference("STEPS"),
+            SensorType.TYPE_SPECIFIC_ECG to loadSharedPreference("ECG"),
+            SensorType.TYPE_SPECIFIC_PPG to loadSharedPreference("PPG"),
+            SensorType.TYPE_SPECIFIC_GSR to loadSharedPreference("GSR")
         )
 
         // Setting the IDs for each components
@@ -87,27 +85,29 @@ class SettingsActivity: Activity() {
 
         // Set the initialisation values
         sensorsInit.forEach { entry ->
-            (sensorsComponents[entry.key]?.get(IDX_SWITCH) as Switch).isChecked = entry.value[0] as Boolean
+            val currentSensor = sensorsComponents[entry.key]!!
+
+            (currentSensor[IDX_SWITCH] as Switch).isChecked = entry.value[0] as Boolean
             if (entry.key != SensorType.TYPE_GNSS) {
-                (sensorsComponents[entry.key]?.get(IDX_SEEKBAR) as SeekBar).isEnabled = entry.value[0] as Boolean
-                (sensorsComponents[entry.key]?.get(IDX_SEEKBAR) as SeekBar).progress =
-                    (entry.value[1] as Double).toInt()
+                (currentSensor[IDX_SEEKBAR] as SeekBar).isEnabled = entry.value[0] as Boolean
+                (currentSensor[IDX_SEEKBAR] as SeekBar).progress = (entry.value[1] as Double).toInt()
             }
-            (sensorsComponents[entry.key]?.get(IDX_TEXTVIEW) as TextView).text =
+            (currentSensor[IDX_TEXTVIEW] as TextView).text =
                 "${progressToFrequency[(entry.value[1] as Double).toInt()]} Hz"
         }
 
         // Define a common seekbar listener
         val seekBarChangeListener = object: SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                val infinitySymbol = "\u221E"
                 val textView: TextView? =
                     sensorsComponents.entries.find { it.value[IDX_SEEKBAR] == seekBar }?.value?.get(
                         2
                     ) as? TextView
-                if (progress != 6) {
+                if (progress < 6) {
                     textView?.text = "${progressToFrequency[progress]} Hz"
                 } else {
-                    textView?.text = "\u221E"
+                    textView?.text = infinitySymbol
                 }
             }
 
@@ -137,11 +137,10 @@ class SettingsActivity: Activity() {
                     (entry.value[IDX_SWITCH] as? Switch)?.setOnCheckedChangeListener { buttonView, isChecked ->
                         (entry.value[IDX_SEEKBAR] as SeekBar).isEnabled = isChecked
                         // Disable GSR if ECG is activated
-                        if (isChecked) {
-                            (sensorsComponents[SensorType.TYPE_SPECIFIC_GSR]?.get(IDX_SWITCH) as Switch).isChecked =
-                                false
-                            (sensorsComponents[SensorType.TYPE_SPECIFIC_GSR]?.get(IDX_SEEKBAR) as SeekBar).isEnabled =
-                                false
+                        val sensorGSR = sensorsComponents[SensorType.TYPE_SPECIFIC_GSR]
+                        if (isChecked && sensorGSR != null) {
+                            (sensorGSR[IDX_SWITCH] as Switch).isChecked = false
+                            (sensorGSR[IDX_SEEKBAR] as SeekBar).isEnabled = false
                         }
                     }
                 }
@@ -150,11 +149,10 @@ class SettingsActivity: Activity() {
                     (entry.value[IDX_SWITCH] as? Switch)?.setOnCheckedChangeListener { buttonView, isChecked ->
                         (entry.value[IDX_SEEKBAR] as SeekBar).isEnabled = isChecked
                         // Disable GSR if ECG is activated
-                        if (isChecked) {
-                            (sensorsComponents[SensorType.TYPE_SPECIFIC_ECG]?.get(IDX_SWITCH) as Switch).isChecked =
-                                false
-                            (sensorsComponents[SensorType.TYPE_SPECIFIC_ECG]?.get(IDX_SEEKBAR) as SeekBar).isEnabled =
-                                false
+                        val sensorECG = sensorsComponents[SensorType.TYPE_SPECIFIC_ECG]
+                        if (isChecked && sensorECG != null) {
+                            (sensorECG[IDX_SWITCH] as Switch).isChecked = false
+                            (sensorECG[IDX_SEEKBAR] as SeekBar).isEnabled = false
                         }
                     }
                 }
@@ -184,7 +182,7 @@ class SettingsActivity: Activity() {
     }
 
     // ---------------------------------------------------------------------------------------------
-    private fun loadMutableList(key: String): MutableList<String> {
+    private fun loadSharedPreference(key: String): MutableList<String> {
         val jsonString = sharedPreferences.getString(key, "")
         val type: Type = object: TypeToken<MutableList<Any>>() {}.type
 
