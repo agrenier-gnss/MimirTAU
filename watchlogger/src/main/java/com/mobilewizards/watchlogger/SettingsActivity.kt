@@ -37,6 +37,7 @@ class SettingsActivity: Activity() {
         setContentView(binding.root)
 
         // Initialisation values
+        // map of sensorString: (sensorEnabled, samplingFrequencyIndex)
         sharedPreferences = getSharedPreferences(sharedPrefName, Context.MODE_PRIVATE)
         if (!sharedPreferences.contains("GNSS")) {
             val editor: SharedPreferences.Editor = sharedPreferences.edit()
@@ -50,8 +51,8 @@ class SettingsActivity: Activity() {
             editor.apply()
         }
 
-        // Load Initialisation values from sharedPreferences to the sensors
-        val sensorsInit = mapOf(
+        // Load Initialisation values from sharedPreferences to the sensor types
+        val sensorsInit: Map<SensorType, MutableList<String>> = mapOf(
             SensorType.TYPE_GNSS to loadSharedPreference("GNSS"),
             SensorType.TYPE_IMU to loadSharedPreference("IMU"),
             SensorType.TYPE_PRESSURE to loadSharedPreference("PSR"),
@@ -85,15 +86,18 @@ class SettingsActivity: Activity() {
 
         // Set the initialisation values
         sensorsInit.forEach { entry ->
-            val currentSensor = sensorsComponents[entry.key]!!
+            val currentSensor = sensorsComponents[entry.key]!! // should never be null
 
-            (currentSensor[IDX_SWITCH] as Switch).isChecked = entry.value[0] as Boolean
+            // The IDE says that the casts below cannot succeed, but they do so ignore that
+            val sensorEnabled = entry.value[0] as Boolean
+            val sensorFrequencyIndex = (entry.value[1] as Double).toInt()
+
+            (currentSensor[IDX_SWITCH] as Switch).isChecked = sensorEnabled
             if (entry.key != SensorType.TYPE_GNSS) {
-                (currentSensor[IDX_SEEKBAR] as SeekBar).isEnabled = entry.value[0] as Boolean
-                (currentSensor[IDX_SEEKBAR] as SeekBar).progress = (entry.value[1] as Double).toInt()
+                (currentSensor[IDX_SEEKBAR] as SeekBar).isEnabled = sensorEnabled
+                (currentSensor[IDX_SEEKBAR] as SeekBar).progress = sensorFrequencyIndex
             }
-            (currentSensor[IDX_TEXTVIEW] as TextView).text =
-                "${progressToFrequency[(entry.value[1] as Double).toInt()]} Hz"
+            (currentSensor[IDX_TEXTVIEW] as TextView).text = "${progressToFrequency[sensorFrequencyIndex]} Hz"
         }
 
         // Define a common seekbar listener

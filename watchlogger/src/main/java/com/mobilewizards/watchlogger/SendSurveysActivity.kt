@@ -32,7 +32,9 @@ class SendSurveysActivity: Activity() {
     private val TAG = "watchLogger"
     private val CSV_FILE_CHANNEL_PATH = MediaStore.Downloads.EXTERNAL_CONTENT_URI
     private var filePaths = mutableListOf<File>()
-    private var fileSendOk: Boolean = true
+    private var fileSendOk: Boolean = false
+
+    // =============================================================================================
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -55,6 +57,7 @@ class SendSurveysActivity: Activity() {
             //
         }
     }
+    // =============================================================================================
 
     private fun fileSendSuccessful() {
         fileSendOk = true
@@ -62,6 +65,7 @@ class SendSurveysActivity: Activity() {
         val openSendInfo = Intent(applicationContext, FileSendActivity::class.java)
         startActivity(openSendInfo)
     }
+    // =============================================================================================
 
     private fun fileSendTerminated() {
         fileSendOk = false
@@ -69,6 +73,8 @@ class SendSurveysActivity: Activity() {
         val openSendInfo = Intent(applicationContext, FileSendActivity::class.java)
         startActivity(openSendInfo)
     }
+
+    // =============================================================================================
 
     @SuppressLint("SimpleDateFormat")
     private fun sendFiles() {
@@ -117,6 +123,7 @@ class SendSurveysActivity: Activity() {
                         outputStream.write(COMMENT_START.toByteArray())
                         outputStream.write("\n".toByteArray())
 
+                        // Read each of the files from WatchActivityHandler and send them to the output stream
                         WatchActivityHandler.getFilePaths().forEach { file ->
 
                             val reader = BufferedReader(FileReader(file))
@@ -154,6 +161,7 @@ class SendSurveysActivity: Activity() {
         }
     }
 
+    // =============================================================================================
     private fun getPhoneNodeId(callback: (ArrayList<String>) -> Unit) {
         val nodeIds = ArrayList<String>()
         Wearable.getNodeClient(this).connectedNodes.addOnSuccessListener { nodes ->
@@ -164,6 +172,8 @@ class SendSurveysActivity: Activity() {
             callback(nodeIds)
         }
     }
+
+    // =============================================================================================
 
     private fun sendCsvFileToPhone(csvFile: File, nodeId: String, context: Context) {
         Log.d(TAG, "in sendCsvFileToPhone " + csvFile.name)
@@ -185,7 +195,7 @@ class SendSurveysActivity: Activity() {
         val callback = object: ChannelClient.ChannelCallback() {
             override fun onChannelOpened(channel: ChannelClient.Channel) {
                 Log.d(TAG, "onChannelOpened " + channel.nodeId)
-                // Send the CSV file to the phone
+                // Send the CSV file to the phone and check if send was successful
                 channelClient.sendFile(channel, csvFile.toUri()).addOnCompleteListener { task ->
                     if (task.isSuccessful) {
                         WatchActivityHandler.fileSendStatus(true)
