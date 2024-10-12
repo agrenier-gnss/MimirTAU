@@ -65,6 +65,7 @@ class SendSurveysActivity: Activity() {
         val openSendInfo = Intent(applicationContext, FileSendActivity::class.java)
         startActivity(openSendInfo)
     }
+    
     // =============================================================================================
 
     private fun fileSendTerminated() {
