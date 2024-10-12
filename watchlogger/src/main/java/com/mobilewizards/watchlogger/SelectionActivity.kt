@@ -25,22 +25,22 @@ class SelectionActivity: Activity() {
 
         val startSurveyBtn = findViewById<Button>(R.id.startSurveyBtn)
         val settingsBtn = findViewById<Button>(R.id.settingsBtn)
+        val sendSurveysBtn = findViewById<Button>(R.id.sendSurveysBtn)
 
         startSurveyBtn.setOnClickListener {
-            launchSettingsActivity()
+            val settingsIntent = Intent(this, SettingsActivity::class.java)
+            startActivityForResult(settingsIntent, SETTINGS_REQUEST_CODE)
         }
 
         settingsBtn.setOnClickListener {
             val openSettings = Intent(applicationContext, SettingsActivity::class.java)
             startActivity(openSettings)
         }
-    }
 
-    // =============================================================================================
-
-    private fun launchSettingsActivity() {
-        val settingsIntent = Intent(this, SettingsActivity::class.java)
-        startActivityForResult(settingsIntent, SETTINGS_REQUEST_CODE)
+        sendSurveysBtn.setOnClickListener {
+            val openSendSurveys = Intent(this, SendSurveysActivity::class.java)
+            startActivity(openSendSurveys)
+        }
     }
 
     // =============================================================================================
@@ -52,20 +52,13 @@ class SelectionActivity: Activity() {
             // Handle the result from the SettingsActivity
             if (resultCode == RESULT_OK) {
                 // The user successfully changed settings
-                launchLoggingActivity()
+                val loggingIntent = Intent(this, LoggingActivity::class.java)
+                startActivity(loggingIntent)
             } else {
                 // The user canceled or there was an issue with settings
                 // Handle accordingly or take appropriate action
             }
         }
-    }
-
-    // =============================================================================================
-
-    private fun launchLoggingActivity() {
-        // Start another activity or perform any other action
-        val loggingIntent = Intent(this, LoggingActivity::class.java)
-        startActivity(loggingIntent)
     }
 
     // =============================================================================================

@@ -12,53 +12,63 @@
     tools:deviceIds="wear">
 
 
-
     <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:orientation="vertical">
+
+
+            <TextView
+                android:id="@+id/MimirText"
                 android:layout_width="match_parent"
-                android:layout_height="match_parent">
+                android:layout_height="wrap_content"
+                android:layout_marginTop="15dp"
+                android:layout_marginBottom="15dp"
+                android:fontFamily="@font/montserrat_bold"
+                android:gravity="center"
+                android:text="Mimir"
+                android:textColor="@color/fontLogo" />
 
+            <Button
+                android:id="@+id/startSurveyBtn"
+                android:layout_width="160dp"
+                android:layout_height="50dp"
+                android:background="@drawable/button_background"
+                android:layout_marginBottom="15dp"
+                android:fontFamily="@font/montserrat_bold"
+                android:textAllCaps="false"
+                android:textColor="@color/fontBlack"
+                android:text="Start survey" />
 
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:gravity="center"
-                    android:orientation="vertical" >
+            <Button
+                android:id="@+id/settingsBtn"
+                android:layout_width="160dp"
+                android:layout_height="50dp"
+                android:layout_marginBottom="15dp"
+                android:background="@drawable/button_background"
+                android:fontFamily="@font/montserrat_bold"
+                android:text="Settings"
+                android:textAllCaps="false"
+                android:textColor="@color/fontBlack" />
 
+            <Button
+                android:id="@+id/sendSurveysBtn"
+                android:layout_width="160dp"
+                android:layout_height="50dp"
+                android:layout_marginBottom="30dp"
+                android:background="@drawable/button_background"
+                android:fontFamily="@font/montserrat_bold"
+                android:text="Survey to phone"
+                android:textAllCaps="false"
+                android:textColor="@color/fontBlack" />
 
-                    <TextView
-                        android:id="@+id/MimirText"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:gravity="center"
-                        android:layout_marginTop="25dp"
-                        android:layout_marginBottom="15dp"
-                        android:fontFamily="@font/montserrat_bold"
-                        android:textColor="@color/fontLogo"
-                        android:text="Mimir" />
-
-                    <Button
-                        android:id="@+id/startSurveyBtn"
-                        android:layout_width="160dp"
-                        android:layout_height="50dp"
-                        android:background="@drawable/button_background"
-                        android:layout_marginBottom="15dp"
-                        android:fontFamily="@font/montserrat_bold"
-                        android:textAllCaps="false"
-                        android:textColor="@color/fontBlack"
-                        android:text="Start survey" />
-
-                    <Button
-                        android:id="@+id/settingsBtn"
-                        android:layout_width="160dp"
-                        android:layout_height="50dp"
-                        android:layout_marginBottom="40dp"
-                        android:background="@drawable/button_background"
-                        android:fontFamily="@font/montserrat_bold"
-                        android:text="Settings"
-                        android:textAllCaps="false"
-                        android:textColor="@color/fontBlack" />
-
-                </LinearLayout>
-            </ScrollView>
+        </LinearLayout>
+    </ScrollView>
 
 </androidx.wear.widget.BoxInsetLayout>

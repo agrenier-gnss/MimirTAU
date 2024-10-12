@@ -43,19 +43,27 @@ class SendSurveysActivity: Activity() {
         setContentView(binding.root)
 
         val toPhoneBtn = findViewById<Button>(R.id.SendToPhoneBtn)
-        val toDriveBtn = findViewById<Button>(R.id.SendToDrive)
+        val surveyToMenuBtn = findViewById<Button>(R.id.surveyToMenuBtn)
 
         WatchActivityHandler.getFilePaths().forEach { path ->
             filePaths.add(path)
         }
 
         toPhoneBtn.setOnClickListener {
+            // back to the menu screen
             sendFiles()
         }
 
-        toDriveBtn.setOnClickListener {
-            //
+        surveyToMenuBtn.setOnClickListener {
+            // back to the menu screen
+            finish()
         }
+
+
+        // possibly add a "toDriveBtn" for sending survey to drive in the future
+        //toDriveBtn.setOnClickListener {
+        //    //
+        //}
     }
     // =============================================================================================
 
@@ -65,7 +73,7 @@ class SendSurveysActivity: Activity() {
         val openSendInfo = Intent(applicationContext, FileSendActivity::class.java)
         startActivity(openSendInfo)
     }
-    
+
     // =============================================================================================
 
     private fun fileSendTerminated() {

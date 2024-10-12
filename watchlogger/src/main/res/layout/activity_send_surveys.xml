@@ -18,7 +18,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:gravity="center"
-            android:orientation="vertical" >
+            android:orientation="vertical">
 
             <TextView
                 android:id="@+id/MimirText"
@@ -41,6 +41,7 @@
                 android:fontFamily="@font/montserrat_regular"
                 android:textColor="@color/fontWhite"
                 android:text="Send survey to" />
+
             <Button
                 android:id="@+id/SendToPhoneBtn"
                 android:layout_width="140dp"
@@ -53,16 +54,16 @@
                 android:text="Phone" />
 
             <Button
-                android:id="@+id/SendToDrive"
+                android:id="@+id/surveyToMenuBtn"
                 android:layout_width="140dp"
                 android:layout_height="50dp"
                 android:layout_marginBottom="15dp"
                 android:background="@drawable/button_background"
                 android:fontFamily="@font/montserrat_bold"
-                android:text="Drive"
+                android:text="Back"
                 android:textAllCaps="false"
                 android:textColor="@color/fontBlack"
-                android:visibility="invisible" />
+                android:visibility="visible" />
 
         </LinearLayout>
     </ScrollView>
