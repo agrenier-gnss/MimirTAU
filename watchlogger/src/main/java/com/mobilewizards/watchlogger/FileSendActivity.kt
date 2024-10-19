@@ -1,7 +1,10 @@
 package com.mobilewizards.logging_app
 
 import android.app.Activity
+import android.content.Intent
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.view.View
 import android.widget.ImageView
 import android.widget.TextView
@@ -34,5 +37,12 @@ class FileSendActivity: Activity() {
             logFailedImage.visibility = View.VISIBLE
             logText.text = "Log upload failed"
         }
+
+        // return to the main menu after timer finished
+        Handler(Looper.getMainLooper()).postDelayed({
+            val intent = Intent(this, SelectionActivity::class.java)
+            startActivity(intent)
+            finish()
+        }, 4000)
     }
 }
