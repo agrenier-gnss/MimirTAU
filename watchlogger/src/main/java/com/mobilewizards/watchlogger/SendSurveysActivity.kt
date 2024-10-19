@@ -22,8 +22,7 @@ import java.io.BufferedReader
 import java.io.File
 import java.io.FileReader
 
-private const val VERSION_TAG = "Version: "
-private const val COMMENT_START = "# "
+private const val COMMENT_START = "#"
 
 
 class SendSurveysActivity: Activity() {
@@ -85,6 +84,9 @@ class SendSurveysActivity: Activity() {
 
     // =============================================================================================
 
+
+    // =============================================================================================
+
     @SuppressLint("SimpleDateFormat")
     private fun sendFiles() {
         getPhoneNodeId { nodeIds ->
@@ -111,35 +113,29 @@ class SendSurveysActivity: Activity() {
                 var path = ""
                 uri?.let { mediaUri ->
                     this.contentResolver.openOutputStream(mediaUri)?.use { outputStream ->
+                        // helper function for output stream
+                        fun writeLine(line: String) {
+                            outputStream.write("$line\n".toByteArray())
+                        }
 
-                        outputStream.write(COMMENT_START.toByteArray())
-                        outputStream.write("log_watch_${SimpleDateFormat("ddMMyyyy_hhmmssSSS").format(startTime)}.csv\n".toByteArray())
-                        outputStream.write(COMMENT_START.toByteArray())
-                        outputStream.write("\n".toByteArray())
-                        outputStream.write(COMMENT_START.toByteArray())
-                        outputStream.write("Header Description:".toByteArray())
-                        outputStream.write("\n".toByteArray())
-                        outputStream.write(COMMENT_START.toByteArray())
-                        outputStream.write("\n".toByteArray())
-                        outputStream.write(COMMENT_START.toByteArray())
-                        outputStream.write(VERSION_TAG.toByteArray())
-                        val manufacturer: String = Build.MANUFACTURER
-                        val model: String = Build.MODEL
-                        val fileVersion =
-                            "${BuildConfig.VERSION_CODE} Platform: ${Build.VERSION.RELEASE} Manufacturer: $manufacturer Model: $model"
-                        outputStream.write(fileVersion.toByteArray())
-                        outputStream.write("\n".toByteArray())
-                        outputStream.write(COMMENT_START.toByteArray())
-                        outputStream.write("\n".toByteArray())
+                        val dateTime: String = SimpleDateFormat("ddMMyyyy_hhmmssSSS").format(startTime)
+                        writeLine("$COMMENT_START log_watch_$dateTime.csv")
+                        writeLine(COMMENT_START)
+                        writeLine("$COMMENT_START Header Description:")
+                        writeLine(COMMENT_START)
+                        writeLine("$COMMENT_START Version: ${BuildConfig.VERSION_CODE} Platform: ${Build.VERSION.RELEASE} Manufacturer: ${Build.MANUFACTURER} Model: ${Build.MODEL}")
+                        writeLine(COMMENT_START)
+
+                        Log.d(TAG, "WatchActivityHandler file paths: ${WatchActivityHandler.getFilePaths()}")
+
 
                         // Read each of the files from WatchActivityHandler and send them to the output stream
                         WatchActivityHandler.getFilePaths().forEach { file ->
 
                             val reader = BufferedReader(FileReader(file))
 
-                            outputStream.write("\n".toByteArray())
-                            outputStream.write(COMMENT_START.toByteArray())
-                            outputStream.write("${file.name}\n".toByteArray())
+                            writeLine("")
+                            writeLine("$COMMENT_START ${file.name}")
 
                             var line: String? = reader.readLine()
                             while (line != null) {
