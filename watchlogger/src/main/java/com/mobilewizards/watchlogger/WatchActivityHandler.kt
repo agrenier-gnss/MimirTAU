@@ -24,8 +24,16 @@ object WatchActivityHandler {
 
     // ---------------------------------------------------------------------------------------------
 
+    fun addFilePath(filePath: String) {
+        val newFile = File(filePath)
+        filepaths.add(newFile)
+    }
+
+    // ---------------------------------------------------------------------------------------------
+
     fun getFilePaths(): List<File> {
         return filepaths
     }
+
 
 }

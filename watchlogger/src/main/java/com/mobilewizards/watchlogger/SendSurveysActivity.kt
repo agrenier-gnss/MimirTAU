@@ -64,6 +64,25 @@ class SendSurveysActivity: Activity() {
         //    //
         //}
     }
+
+    // =============================================================================================
+
+    private fun getSurveyFiles(): List<File> {
+        // app file directory
+        Log.d(TAG, filesDir.absolutePath)
+        val appFilesDir = File(filesDir.absolutePath)
+
+        // All the files in the app file directory with all the non txt files filtered out
+        val filesList = appFilesDir.listFiles()?.toList() ?: emptyList()
+
+        val txtFilesList = filesList.filter { file ->
+            file.extension == "txt"
+        }
+
+        return txtFilesList
+    }
+
+
     // =============================================================================================
 
     private fun fileSendSuccessful() {
@@ -84,10 +103,74 @@ class SendSurveysActivity: Activity() {
 
     // =============================================================================================
 
+    @SuppressLint("SimpleDateFormat")
+    private fun generateCsvFile(csvFile: File): String {
+        // generates the csv file and saves it into the watches' downloaded files
+        val contentValues = ContentValues().apply {
+            put(
+                MediaStore.Downloads.DISPLAY_NAME,
+                "log_watch_${SimpleDateFormat("ddMMyyyy_hhmmssSSS").format(startTime)}.csv"
+            )
+            put(MediaStore.Downloads.MIME_TYPE, "text/csv")
+            put(MediaStore.Downloads.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
+        }
+
+        val uri = this.contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, contentValues)
+        var filePath = ""
+        uri?.let { mediaUri ->
+            this.contentResolver.openOutputStream(mediaUri)?.use { outputStream ->
+                // helper function for output stream
+                fun writeLine(line: String) {
+                    outputStream.write("$line\n".toByteArray())
+                }
+
+                val dateTime: String = SimpleDateFormat("ddMMyyyy_hhmmssSSS").format(startTime)
+                writeLine("$COMMENT_START log_watch_$dateTime.csv")
+                writeLine(COMMENT_START)
+                writeLine("$COMMENT_START Header Description:")
+                writeLine(COMMENT_START)
+                writeLine("$COMMENT_START Version: ${BuildConfig.VERSION_CODE} Platform: ${Build.VERSION.RELEASE} Manufacturer: ${Build.MANUFACTURER} Model: ${Build.MODEL}")
+                writeLine(COMMENT_START)
+
+
+                // Read each of the files from csvFile and send them to the output stream
+                val reader = BufferedReader(FileReader(csvFile))
+
+                writeLine("")
+                writeLine("$COMMENT_START ${csvFile.name}")
+
+                var line: String? = reader.readLine()
+                while (line != null) {
+                    writeLine(line)
+                    line = reader.readLine()
+                }
+                reader.close()
+
+                outputStream.flush()
+
+                val cursor = contentResolver.query(mediaUri, null, null, null, null)
+                cursor?.use { c ->
+                    if (c.moveToFirst()) {
+                        val columnIndex = c.getColumnIndex(MediaStore.Images.Media.DATA)
+                        if (columnIndex >= 0) {
+                            filePath = c.getString(columnIndex)
+                            // Use the file path as needed
+                            Log.d("File path", filePath)
+                        } else {
+                            Log.e("Error", "Column MediaStore.Images.Media.DATA not found.")
+                        }
+                    }
+                }
+
+            }
+        }
+        return filePath
+    }
+
 
     // =============================================================================================
 
-    @SuppressLint("SimpleDateFormat")
+
     private fun sendFiles() {
         getPhoneNodeId { nodeIds ->
             Log.d(TAG, "Received nodeIds: $nodeIds")
@@ -97,71 +180,15 @@ class SendSurveysActivity: Activity() {
             if (connectedNode.isEmpty()) {
                 Log.d(TAG, "no nodes found")
                 Toast.makeText(this, "Phone not connected", Toast.LENGTH_SHORT).show()
+
             } else {
                 Log.d(TAG, "nodes found, sending")
 
-                val contentValues = ContentValues().apply {
-                    put(
-                        MediaStore.Downloads.DISPLAY_NAME,
-                        "log_watch_${SimpleDateFormat("ddMMyyyy_hhmmssSSS").format(startTime)}.csv"
-                    )
-                    put(MediaStore.Downloads.MIME_TYPE, "text/csv")
-                    put(MediaStore.Downloads.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
-                }
+                val file = getSurveyFiles()[3]
+                Log.d(TAG, "sending file: $file")
+                val csvPath = generateCsvFile(file)
 
-                val uri = this.contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, contentValues)
-                var path = ""
-                uri?.let { mediaUri ->
-                    this.contentResolver.openOutputStream(mediaUri)?.use { outputStream ->
-                        // helper function for output stream
-                        fun writeLine(line: String) {
-                            outputStream.write("$line\n".toByteArray())
-                        }
-
-                        val dateTime: String = SimpleDateFormat("ddMMyyyy_hhmmssSSS").format(startTime)
-                        writeLine("$COMMENT_START log_watch_$dateTime.csv")
-                        writeLine(COMMENT_START)
-                        writeLine("$COMMENT_START Header Description:")
-                        writeLine(COMMENT_START)
-                        writeLine("$COMMENT_START Version: ${BuildConfig.VERSION_CODE} Platform: ${Build.VERSION.RELEASE} Manufacturer: ${Build.MANUFACTURER} Model: ${Build.MODEL}")
-                        writeLine(COMMENT_START)
-
-                        Log.d(TAG, "WatchActivityHandler file paths: ${WatchActivityHandler.getFilePaths()}")
-
-
-                        // Read each of the files from WatchActivityHandler and send them to the output stream
-                        WatchActivityHandler.getFilePaths().forEach { file ->
-
-                            val reader = BufferedReader(FileReader(file))
-
-                            writeLine("")
-                            writeLine("$COMMENT_START ${file.name}")
-
-                            var line: String? = reader.readLine()
-                            while (line != null) {
-                                outputStream.write("$line\n".toByteArray())
-                                line = reader.readLine()
-                            }
-                            reader.close()
-                        }
-                        outputStream.flush()
-
-                        val cursor = contentResolver.query(mediaUri, null, null, null, null)
-                        cursor?.use { c ->
-                            if (c.moveToFirst()) {
-                                val columnIndex = c.getColumnIndex(MediaStore.Images.Media.DATA)
-                                if (columnIndex >= 0) {
-                                    path = c.getString(columnIndex)
-                                    // Use the file path as needed
-                                    Log.d("File path", path)
-                                } else {
-                                    Log.e("Error", "Column MediaStore.Images.Media.DATA not found.")
-                                }
-                            }
-                        }
-                    }
-                }
-                sendCsvFileToPhone(File(path), connectedNode, this)
+                sendCsvFileToPhone(File(csvPath), connectedNode, this)
             }
         }
     }
@@ -181,13 +208,12 @@ class SendSurveysActivity: Activity() {
     // =============================================================================================
 
     private fun sendCsvFileToPhone(csvFile: File, nodeId: String, context: Context) {
-        Log.d(TAG, "in sendCsvFileToPhone " + csvFile.name)
+        Log.d(TAG, "in sendCsvFileToPhone ${csvFile.name}")
         // Checks if the file is found and read
         try {
             val bufferedReader = BufferedReader(FileReader(csvFile))
             var line: String? = bufferedReader.readLine()
             while (line != null) {
-                Log.d(TAG, line.toString())
                 line = bufferedReader.readLine()
             }
             bufferedReader.close()
