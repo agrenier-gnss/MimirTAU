@@ -22,6 +22,16 @@ import java.io.BufferedReader
 import java.io.File
 import java.io.FileReader
 
+
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import android.widget.TextView
+import androidx.appcompat.app.AppCompatActivity
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
+
+
 private const val COMMENT_START = "#"
 
 
@@ -37,6 +47,7 @@ class SendSurveysActivity: Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
 
         binding = ActivitySendSurveysBinding.inflate(layoutInflater)
         setContentView(binding.root)
@@ -63,6 +74,44 @@ class SendSurveysActivity: Activity() {
         //toDriveBtn.setOnClickListener {
         //    //
         //}
+
+
+        // ================================== NEW ===============================================
+
+        setContentView(R.layout.activity_send_surveys)
+        val filesRecyclerView = findViewById<RecyclerView>(R.id.filesRecyclerView)
+
+        val fileList = getSurveyFiles()
+
+        // Set up the RecyclerView with an inline adapter
+        filesRecyclerView.apply {
+            layoutManager = LinearLayoutManager(this@SendSurveysActivity)
+            adapter = object: RecyclerView.Adapter<FileViewHolder>() {
+
+                override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): FileViewHolder {
+                    val view = LayoutInflater.from(parent.context).inflate(R.layout.item_file, parent, false)
+                    return FileViewHolder(view)
+                }
+
+                override fun onBindViewHolder(holder: FileViewHolder, position: Int) {
+                    val file = fileList[position]
+                    holder.fileNameTextView.text = file.name
+                    //holder.filePathTextView.text = file.absolutePath
+                }
+
+                override fun getItemCount(): Int = fileList.size
+            }
+        }
+
+
+    }
+
+    // =============================================================================================
+
+    // ViewHolder for the RecyclerView
+    inner class FileViewHolder(view: View): RecyclerView.ViewHolder(view) {
+        val fileNameTextView: TextView = view.findViewById(R.id.fileNameTextView)
+        //val filePathTextView: TextView = view.findViewById(R.id.filePathTextView)
     }
 
     // =============================================================================================

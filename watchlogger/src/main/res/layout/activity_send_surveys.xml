@@ -65,6 +65,11 @@
                 android:textColor="@color/fontBlack"
                 android:visibility="visible" />
 
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/filesRecyclerView"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
+
         </LinearLayout>
     </ScrollView>
 
