@@ -1,28 +1,47 @@
 <?xml version="1.0" encoding="utf-8"?>
 
 <!-- The items that are in RecyclerView in activity_send_surveys.xml -->
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="vertical"
     android:background="@drawable/item_background"
     android:padding="3dp"
     android:layout_margin="3dp">
 
     <TextView
         android:id="@+id/fileNameTextView"
-        android:layout_width="match_parent"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_weight="1"
         android:textSize="11sp"
-        android:textColor="@android:color/black" />
+        android:textColor="@android:color/black"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintEnd_toStartOf="@id/circularButton" />
 
     <TextView
         android:id="@+id/fileCreationTimeTextView"
-        android:layout_width="match_parent"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_weight="1"
         android:textSize="11sp"
-        android:textColor="@android:color/black" />
+        android:textColor="@android:color/black"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/fileNameTextView"
+        app:layout_constraintEnd_toStartOf="@id/circularButton" />
 
-</LinearLayout>
+    <ImageButton
+        android:id="@+id/circularButton"
+        android:layout_width="18dp"
+        android:layout_height="18dp"
+        android:background="@android:color/transparent"
+        android:src="@drawable/upload"
+        android:layout_marginEnd="8dp"
+        android:scaleType="centerInside"
+        android:contentDescription="circular_button"
+        android:backgroundTint="@android:color/transparent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+
+</androidx.constraintlayout.widget.ConstraintLayout>

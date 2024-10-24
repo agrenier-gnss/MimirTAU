@@ -23,6 +23,7 @@ import java.io.File
 import java.io.FileReader
 import java.nio.file.Files
 import java.nio.file.attribute.BasicFileAttributes
+import android.widget.ImageButton
 
 
 import android.view.LayoutInflater
@@ -85,51 +86,22 @@ class SendSurveysActivity: Activity() {
 
         val fileList = getSurveyFiles()
 
-        // RecyclerView with an inline adapter
+        // Button functionality for the buttons in RecyclerView
         filesRecyclerView.apply {
             layoutManager = LinearLayoutManager(this@SendSurveysActivity)
-            adapter = object: RecyclerView.Adapter<FileViewHolder>() {
+            adapter = FilesAdapter(fileList) { fileItem ->
 
-                override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): FileViewHolder {
-                    val view = LayoutInflater.from(parent.context).inflate(R.layout.item_file, parent, false)
-                    return FileViewHolder(view)
-                }
+                Toast.makeText(
+                    this@SendSurveysActivity,
+                    "Clicked: ${fileItem.nameWithoutExtension}",
+                    Toast.LENGTH_SHORT
+                ).show()
 
-                override fun onBindViewHolder(holder: FileViewHolder, position: Int) {
-                    val file = fileList[position]
-                    holder.fileNameTextView.text = file.nameWithoutExtension
-                    holder.fileCreationTimeTextView.text = getFileCreationTime(file)
-                }
-
-                override fun getItemCount(): Int = fileList.size
             }
         }
 
     }
 
-    // =============================================================================================
-
-    private fun getFileCreationTime(file: File): String? {
-        return try {
-            val path = file.toPath()
-            val attributes = Files.readAttributes(path, BasicFileAttributes::class.java)
-
-            val creationTime = attributes.creationTime()
-
-            val dateFormat = SimpleDateFormat("dd/MM/yyyy HH:mm:ss")
-            dateFormat.format(creationTime.toMillis())
-        } catch (e: Exception) {
-            e.printStackTrace()
-            null
-        }
-    }
-    // =============================================================================================
-
-    // ViewHolder for the RecyclerView
-    inner class FileViewHolder(view: View): RecyclerView.ViewHolder(view) {
-        val fileNameTextView: TextView = view.findViewById(R.id.fileNameTextView)
-        val fileCreationTimeTextView: TextView = view.findViewById(R.id.fileCreationTimeTextView)
-    }
 
     // =============================================================================================
 
@@ -333,4 +305,51 @@ class SendSurveysActivity: Activity() {
             }
         }
     }
+}
+
+
+// Separate class for RecyclerView items in RecyclerView activity_send_surveys.xml
+class FilesAdapter(
+    private val filesList: List<File>, private val onButtonClick: (File) -> Unit
+): RecyclerView.Adapter<FilesAdapter.FileViewHolder>() {
+
+
+    inner class FileViewHolder(view: View): RecyclerView.ViewHolder(view) {
+        val fileNameTextView: TextView = view.findViewById(R.id.fileNameTextView)
+        val fileCreationTimeTextView: TextView = view.findViewById(R.id.fileCreationTimeTextView)
+        val circularButton: ImageButton = view.findViewById(R.id.circularButton)
+    }
+
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): FileViewHolder {
+        val view = LayoutInflater.from(parent.context).inflate(R.layout.item_file, parent, false)
+        return FileViewHolder(view)
+    }
+
+    override fun onBindViewHolder(holder: FileViewHolder, position: Int) {
+        val file = filesList[position]
+        holder.fileNameTextView.text = file.nameWithoutExtension
+        holder.fileCreationTimeTextView.text = getFileCreationTime(file)
+
+        holder.circularButton.setOnClickListener {
+            onButtonClick(file)
+        }
+    }
+
+    // file file creation time for displaying
+    private fun getFileCreationTime(file: File): String? {
+        return try {
+            val path = file.toPath()
+            val attributes = Files.readAttributes(path, BasicFileAttributes::class.java)
+
+            val creationTime = attributes.creationTime()
+
+            val dateFormat = SimpleDateFormat("dd/MM/yyyy HH:mm:ss")
+            dateFormat.format(creationTime.toMillis())
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
+
+    override fun getItemCount(): Int = filesList.size
 }
