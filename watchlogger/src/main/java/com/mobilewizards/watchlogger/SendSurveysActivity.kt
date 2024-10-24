@@ -83,7 +83,7 @@ class SendSurveysActivity: Activity() {
 
         val fileList = getSurveyFiles()
 
-        // Set up the RecyclerView with an inline adapter
+        // RecyclerView with an inline adapter
         filesRecyclerView.apply {
             layoutManager = LinearLayoutManager(this@SendSurveysActivity)
             adapter = object: RecyclerView.Adapter<FileViewHolder>() {
