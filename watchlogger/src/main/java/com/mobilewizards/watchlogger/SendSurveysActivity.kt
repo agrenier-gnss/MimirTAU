@@ -21,6 +21,8 @@ import com.mobilewizards.watchlogger.WatchActivityHandler
 import java.io.BufferedReader
 import java.io.File
 import java.io.FileReader
+import java.nio.file.Files
+import java.nio.file.attribute.BasicFileAttributes
 
 
 import android.view.LayoutInflater
@@ -95,23 +97,38 @@ class SendSurveysActivity: Activity() {
 
                 override fun onBindViewHolder(holder: FileViewHolder, position: Int) {
                     val file = fileList[position]
-                    holder.fileNameTextView.text = file.name
-                    //holder.filePathTextView.text = file.absolutePath
+                    holder.fileNameTextView.text = file.nameWithoutExtension
+                    holder.fileCreationTimeTextView.text = getFileCreationTime(file)
                 }
 
                 override fun getItemCount(): Int = fileList.size
             }
         }
 
-
     }
 
+    // =============================================================================================
+
+    private fun getFileCreationTime(file: File): String? {
+        return try {
+            val path = file.toPath()
+            val attributes = Files.readAttributes(path, BasicFileAttributes::class.java)
+
+            val creationTime = attributes.creationTime()
+
+            val dateFormat = SimpleDateFormat("dd/MM/yyyy HH:mm:ss")
+            dateFormat.format(creationTime.toMillis())
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
     // =============================================================================================
 
     // ViewHolder for the RecyclerView
     inner class FileViewHolder(view: View): RecyclerView.ViewHolder(view) {
         val fileNameTextView: TextView = view.findViewById(R.id.fileNameTextView)
-        //val filePathTextView: TextView = view.findViewById(R.id.filePathTextView)
+        val fileCreationTimeTextView: TextView = view.findViewById(R.id.fileCreationTimeTextView)
     }
 
     // =============================================================================================

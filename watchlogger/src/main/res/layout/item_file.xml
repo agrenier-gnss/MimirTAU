@@ -1,16 +1,28 @@
 <?xml version="1.0" encoding="utf-8"?>
+
+<!-- The items that are in RecyclerView in activity_send_surveys.xml -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="horizontal"
-    android:padding="5dp">
+    android:orientation="vertical"
+    android:background="@drawable/item_background"
+    android:padding="3dp"
+    android:layout_margin="3dp">
 
     <TextView
         android:id="@+id/fileNameTextView"
-        android:layout_width="0dp"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_weight="1"
         android:textSize="11sp"
-        android:textColor="@android:color/darker_gray" />
+        android:textColor="@android:color/black" />
+
+    <TextView
+        android:id="@+id/fileCreationTimeTextView"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:textSize="11sp"
+        android:textColor="@android:color/black" />
 
 </LinearLayout>
