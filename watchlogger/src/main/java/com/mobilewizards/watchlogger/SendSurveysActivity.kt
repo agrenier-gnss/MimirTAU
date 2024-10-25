@@ -51,6 +51,7 @@ class SendSurveysActivity: Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        setContentView(R.layout.activity_send_surveys)
 
         binding = ActivitySendSurveysBinding.inflate(layoutInflater)
         setContentView(binding.root)
@@ -58,13 +59,15 @@ class SendSurveysActivity: Activity() {
         val toPhoneBtn = findViewById<Button>(R.id.SendToPhoneBtn)
         val surveyToMenuBtn = findViewById<Button>(R.id.surveyToMenuBtn)
 
+        Log.d(TAG, "toPhoneBtn: $toPhoneBtn, surveyToMenuBtn: $surveyToMenuBtn")
+
         WatchActivityHandler.getFilePaths().forEach { path ->
             filePaths.add(path)
         }
 
         toPhoneBtn.setOnClickListener {
             // back to the menu screen
-            sendFiles()
+            //sendFiles()
         }
 
         surveyToMenuBtn.setOnClickListener {
@@ -81,27 +84,26 @@ class SendSurveysActivity: Activity() {
 
         // ================================== NEW ===============================================
 
-        setContentView(R.layout.activity_send_surveys)
+
         val filesRecyclerView = findViewById<RecyclerView>(R.id.filesRecyclerView)
 
         val fileList = getSurveyFiles()
 
-        // Button functionality for the buttons in RecyclerView
+        // Button functionality for the buttons in RecyclerView that send or delete files
         filesRecyclerView.apply {
             layoutManager = LinearLayoutManager(this@SendSurveysActivity)
             adapter = FilesAdapter(fileList) { fileItem ->
 
-                Toast.makeText(
-                    this@SendSurveysActivity,
-                    "Clicked: ${fileItem.nameWithoutExtension}",
-                    Toast.LENGTH_SHORT
-                ).show()
+                //Toast.makeText(
+                //    this@SendSurveysActivity, "Clicked: ${fileItem.nameWithoutExtension}", Toast.LENGTH_SHORT
+                //).show()
+
+                sendFiles(fileItem)
 
             }
         }
 
     }
-
 
     // =============================================================================================
 
@@ -209,7 +211,7 @@ class SendSurveysActivity: Activity() {
     // =============================================================================================
 
 
-    private fun sendFiles() {
+    private fun sendFiles(file: File) {
         getPhoneNodeId { nodeIds ->
             Log.d(TAG, "Received nodeIds: $nodeIds")
             // Check if there are connected nodes
@@ -222,7 +224,6 @@ class SendSurveysActivity: Activity() {
             } else {
                 Log.d(TAG, "nodes found, sending")
 
-                val file = getSurveyFiles()[3]
                 Log.d(TAG, "sending file: $file")
                 val csvPath = generateCsvFile(file)
 

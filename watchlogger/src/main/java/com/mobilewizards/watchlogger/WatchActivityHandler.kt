@@ -34,6 +34,4 @@ object WatchActivityHandler {
     fun getFilePaths(): List<File> {
         return filepaths
     }
-
-
 }
