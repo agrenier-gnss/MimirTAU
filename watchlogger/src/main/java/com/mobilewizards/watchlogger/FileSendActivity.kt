@@ -40,9 +40,8 @@ class FileSendActivity: Activity() {
 
         // return to the main menu after timer finished
         Handler(Looper.getMainLooper()).postDelayed({
-            val intent = Intent(this, SelectionActivity::class.java)
+            val intent = Intent(this, SendSurveysActivity::class.java)
             startActivity(intent)
-            finish()
         }, 4000)
     }
 }

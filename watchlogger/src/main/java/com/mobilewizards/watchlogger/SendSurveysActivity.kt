@@ -72,9 +72,9 @@ class SendSurveysActivity: Activity() {
 
         surveyToMenuBtn.setOnClickListener {
             // back to the menu screen
-            finish()
+            val intent = Intent(this, SelectionActivity::class.java)
+            startActivity(intent)
         }
-
 
         // possibly add a "toDriveBtn" for sending survey to drive in the future
         //toDriveBtn.setOnClickListener {
@@ -146,11 +146,13 @@ class SendSurveysActivity: Activity() {
     @SuppressLint("SimpleDateFormat")
     private fun generateCsvFile(csvFile: File): String {
         // generates the csv file and saves it into the watches' downloaded files
+
+        val dateTime = SimpleDateFormat("yyyyMMdd_HHmmssSSS").format(System.currentTimeMillis())
+
+        val fileName = "log_watch_$dateTime.csv"
+
         val contentValues = ContentValues().apply {
-            put(
-                MediaStore.Downloads.DISPLAY_NAME,
-                "log_watch_${SimpleDateFormat("ddMMyyyy_hhmmssSSS").format(startTime)}.csv"
-            )
+            put(MediaStore.Downloads.DISPLAY_NAME, fileName)
             put(MediaStore.Downloads.MIME_TYPE, "text/csv")
             put(MediaStore.Downloads.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
         }
@@ -164,7 +166,6 @@ class SendSurveysActivity: Activity() {
                     outputStream.write("$line\n".toByteArray())
                 }
 
-                val dateTime: String = SimpleDateFormat("ddMMyyyy_hhmmssSSS").format(startTime)
                 writeLine("$COMMENT_START log_watch_$dateTime.csv")
                 writeLine(COMMENT_START)
                 writeLine("$COMMENT_START Header Description:")
@@ -210,37 +211,31 @@ class SendSurveysActivity: Activity() {
 
     // =============================================================================================
 
-
     private fun sendFiles(file: File) {
-        getPhoneNodeId { nodeIds ->
-            Log.d(TAG, "Received nodeIds: $nodeIds")
+        getPhoneNodeId { nodeId ->
+            Log.d(TAG, "Received nodeId: $nodeId")
             // Check if there are connected nodes
-            val connectedNode: String = if (nodeIds.size > 0) nodeIds[0] else ""
-
-            if (connectedNode.isEmpty()) {
+            if (nodeId.isNullOrEmpty()) {
                 Log.d(TAG, "no nodes found")
                 Toast.makeText(this, "Phone not connected", Toast.LENGTH_SHORT).show()
+                return@getPhoneNodeId
 
-            } else {
-                Log.d(TAG, "nodes found, sending")
-
-                Log.d(TAG, "sending file: $file")
-                val csvPath = generateCsvFile(file)
-
-                sendCsvFileToPhone(File(csvPath), connectedNode, this)
             }
+
+            // successful connection
+            Log.d(TAG, "nodes found, sending file: $file")
+
+            val csvPath = generateCsvFile(file)
+            sendCsvFileToPhone(File(csvPath), nodeId, this)
+
         }
     }
 
     // =============================================================================================
-    private fun getPhoneNodeId(callback: (ArrayList<String>) -> Unit) {
-        val nodeIds = ArrayList<String>()
+
+    private fun getPhoneNodeId(callback: (String?) -> Unit) {
         Wearable.getNodeClient(this).connectedNodes.addOnSuccessListener { nodes ->
-            for (node in nodes) {
-                Log.d(TAG, "connected node in getPhoneId " + node.id)
-                nodeIds.add(node.id)
-            }
-            callback(nodeIds)
+            callback(nodes.firstOrNull()?.id)
         }
     }
 
