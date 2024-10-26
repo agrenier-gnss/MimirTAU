@@ -24,6 +24,7 @@ import java.io.FileReader
 import java.nio.file.Files
 import java.nio.file.attribute.BasicFileAttributes
 import android.widget.ImageButton
+import android.app.AlertDialog
 
 
 import android.view.LayoutInflater
@@ -98,11 +99,43 @@ class SendSurveysActivity: Activity() {
                 //    this@SendSurveysActivity, "Clicked: ${fileItem.nameWithoutExtension}", Toast.LENGTH_SHORT
                 //).show()
 
-                sendFiles(fileItem)
+                fileSendConfirmationPopup(fileItem)
 
             }
         }
 
+    }
+
+    // =============================================================================================
+    private fun fileSendConfirmationPopup(file: File) {
+        val dialogView = LayoutInflater.from(this).inflate(R.layout.file_send_dialog_confirmation, null)
+        val builder = AlertDialog.Builder(this).setView(dialogView)
+
+
+        builder.setTitle("Send File")
+        builder.setMessage("Are you sure you want to send file the following file to phone: ${file.nameWithoutExtension}?")
+        builder.setIcon(R.drawable.upload) // Use your drawable resource for the send icon
+
+        val dialog = builder.create()
+
+        // confirm button
+        dialogView.findViewById<TextView>(R.id.dialog_message).text =
+            "Are you sure you want to send the file to phone:\n${file.nameWithoutExtension}?"
+
+        // cancel button
+        dialogView.findViewById<Button>(R.id.btn_cancel).setOnClickListener {
+            // cancelled
+            dialog.dismiss()
+        }
+
+        dialogView.findViewById<Button>(R.id.btn_confirm).setOnClickListener {
+            // file transfer confirmed
+            sendFiles(file)
+            dialog.dismiss()
+        }
+
+        val alert = builder.create()
+        alert.show()
     }
 
     // =============================================================================================
@@ -119,7 +152,8 @@ class SendSurveysActivity: Activity() {
             file.extension == "txt"
         }
 
-        return txtFilesList
+        // get files sorted from the most recent to the oldest
+        return txtFilesList.sortedByDescending { it.lastModified() }
     }
 
 
@@ -166,13 +200,12 @@ class SendSurveysActivity: Activity() {
                     outputStream.write("$line\n".toByteArray())
                 }
 
-                writeLine("$COMMENT_START log_watch_$dateTime.csv")
+                writeLine("$COMMENT_START $fileName")
                 writeLine(COMMENT_START)
                 writeLine("$COMMENT_START Header Description:")
                 writeLine(COMMENT_START)
                 writeLine("$COMMENT_START Version: ${BuildConfig.VERSION_CODE} Platform: ${Build.VERSION.RELEASE} Manufacturer: ${Build.MANUFACTURER} Model: ${Build.MODEL}")
                 writeLine(COMMENT_START)
-
 
                 // Read each of the files from csvFile and send them to the output stream
                 val reader = BufferedReader(FileReader(csvFile))
