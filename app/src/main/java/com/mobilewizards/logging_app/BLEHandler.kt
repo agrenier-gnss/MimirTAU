@@ -31,6 +31,7 @@ class BLEHandler(private val context: Context) {
     }
 
     private fun initializeBluetooth() {
+
         bluetoothAdapter = BluetoothAdapter.getDefaultAdapter()
         bluetoothLeScanner = bluetoothAdapter.bluetoothLeScanner
     }
@@ -74,6 +75,14 @@ class BLEHandler(private val context: Context) {
             bluetoothLeScanner?.startScan(scanCallback)
             startTime = System.currentTimeMillis()
         } catch(e: SecurityException){
+            Log.d("Error", "No permission for BLE fetching")
+        }
+    }
+
+    fun stopScanDevice(){
+        try {
+            bluetoothLeScanner?.stopScan(scanCallback)
+        } catch (e: SecurityException){
             Log.d("Error", "No permission for BLE fetching")
         }
     }

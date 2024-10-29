@@ -1,15 +1,19 @@
 package com.mobilewizards.logging_app
 
+import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
+import android.content.pm.PackageManager
 import android.os.Bundle
 import android.util.Log
 import android.view.*
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.SwitchCompat
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import com.mimir.sensors.SensorType
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
@@ -24,7 +28,7 @@ class SettingsActivity : AppCompatActivity() {
     private lateinit var sharedPreferences: SharedPreferences
     private val progressToFrequency = arrayOf(1, 5, 10, 50, 100, 200, 0)
     private lateinit var sensorsComponents : MutableMap<String, MutableList<Any?>>
-
+    private lateinit var bleHandler: BLEHandler
     @SuppressLint("ClickableViewAccessibility")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -43,6 +47,7 @@ class SettingsActivity : AppCompatActivity() {
             editor.putString("STEPS", Gson().toJson(mutableListOf(false, 1)))
             editor.apply()
         }
+        checkAndRequestBluetoothPermissions()
 
         // Load from shared preferences
         val sensorsInit = arrayOf("GNSS", "IMU", "PSR", "STEPS")
@@ -138,6 +143,43 @@ class SettingsActivity : AppCompatActivity() {
         btnDefault.setOnClickListener {
             saveDefaultSettings()
         }
+
+        //scan button
+        val btnScan = findViewById<Button>(R.id.button_scan)
+        btnScan.setOnClickListener{
+            if(btnScan.text.equals("Scan")){
+                btnScan.setBackgroundColor(ContextCompat.getColor(this, R.color.green))
+                btnScan.setText("Stop")
+                scanBleDevice()
+            }else{
+                btnScan.setBackgroundColor(ContextCompat.getColor(this, R.color.tropical_indigo))
+                btnScan.setText("Scan")
+                stopScanBleDevice()
+            }
+        }
+    }
+
+
+    // ---------------------------------------------------------------------------------------------
+
+
+    private fun checkAndRequestBluetoothPermissions() {
+
+        val permissions = arrayOf(
+            Manifest.permission.BLUETOOTH,
+            Manifest.permission.BLUETOOTH_ADMIN,
+            Manifest.permission.ACCESS_FINE_LOCATION
+        )
+
+        val permissionsToRequest = permissions.filter {
+            ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
+        }
+
+        if (permissionsToRequest.isNotEmpty()) {
+            ActivityCompat.requestPermissions(this, permissionsToRequest.toTypedArray(), 1)
+        } else {
+            bleHandler = BLEHandler(this)
+        }
     }
 
     // ---------------------------------------------------------------------------------------------
@@ -216,6 +258,22 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     // ---------------------------------------------------------------------------------------------
+
+    fun scanBleDevice(){
+        bleHandler.setUpLogging()
+    }
+
+    fun stopScanBleDevice(){
+        bleHandler.stopScanDevice()
+        val scanResult = bleHandler.getBLEValues()
+        displayScanResults(scanResult)
+    }
+    private fun displayScanResults(scanResults: MutableList<String>) {
+        // Display or process the scan results
+        scanResults.forEach { result ->
+            Log.d("ScanResult", result)
+        }
+    }
 
     // Creates main_menu.xml
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
