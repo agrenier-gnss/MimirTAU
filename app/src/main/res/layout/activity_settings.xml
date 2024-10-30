@@ -105,22 +105,14 @@
                 app:layout_constraintTop_toTopOf="@+id/settings" />
             <Button
                 android:id="@+id/button_scan"
-                android:layout_width="wrap_content"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="5dp"
-                android:text="Scan"
-                app:layout_constraintTop_toBottomOf="@+id/button_save"
-                app:layout_constraintStart_toStartOf="@+id/button_save"
-                app:layout_constraintEnd_toEndOf="@+id/button_save"  />
-            <Button
-                android:id="@+id/button_connect"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="5dp"
-                android:text="Connect"
+                android:text="ShowPairedDevices"
                 app:layout_constraintTop_toBottomOf="@+id/button_default"
-                app:layout_constraintStart_toStartOf="@+id/button_default"
-                app:layout_constraintEnd_toEndOf="@+id/button_default"  />
+                app:layout_constraintEnd_toEndOf="@+id/button_default"
+                app:layout_constraintWidth_default="wrap" />
+
 
 
             <LinearLayout
@@ -133,7 +125,7 @@
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintLeft_toLeftOf="parent"
                 app:layout_constraintRight_toRightOf="parent"
-                app:layout_constraintTop_toBottomOf="@id/button_connect">
+                app:layout_constraintTop_toBottomOf="@id/button_scan">
 
             </LinearLayout>
 

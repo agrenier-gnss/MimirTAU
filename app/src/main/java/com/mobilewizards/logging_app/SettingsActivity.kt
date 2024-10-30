@@ -2,10 +2,15 @@ package com.mobilewizards.logging_app
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.bluetooth.BluetoothDevice
+import android.bluetooth.le.ScanFilter
+import android.bluetooth.le.ScanSettings
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
+import android.os.Build
+import androidx.appcompat.app.AlertDialog
 import android.os.Bundle
 import android.util.Log
 import android.view.*
@@ -147,7 +152,7 @@ class SettingsActivity : AppCompatActivity() {
         //scan button
         val btnScan = findViewById<Button>(R.id.button_scan)
         btnScan.setOnClickListener{
-            if(btnScan.text.equals("Scan")){
+      /*      if(btnScan.text.equals("Scan")){
                 btnScan.setBackgroundColor(ContextCompat.getColor(this, R.color.green))
                 btnScan.setText("Stop")
                 scanBleDevice()
@@ -155,7 +160,9 @@ class SettingsActivity : AppCompatActivity() {
                 btnScan.setBackgroundColor(ContextCompat.getColor(this, R.color.tropical_indigo))
                 btnScan.setText("Scan")
                 stopScanBleDevice()
-            }
+            }*/
+            showPairedDevices()
+
         }
     }
 
@@ -165,10 +172,13 @@ class SettingsActivity : AppCompatActivity() {
 
     private fun checkAndRequestBluetoothPermissions() {
 
-        val permissions = arrayOf(
+        val permissions = mutableListOf(
             Manifest.permission.BLUETOOTH,
             Manifest.permission.BLUETOOTH_ADMIN,
-            Manifest.permission.ACCESS_FINE_LOCATION
+            Manifest.permission.ACCESS_FINE_LOCATION,
+            Manifest.permission.ACCESS_COARSE_LOCATION,
+            Manifest.permission.BLUETOOTH_SCAN,
+            Manifest.permission.BLUETOOTH_CONNECT
         )
 
         val permissionsToRequest = permissions.filter {
@@ -181,6 +191,70 @@ class SettingsActivity : AppCompatActivity() {
             bleHandler = BLEHandler(this)
         }
     }
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == 1) {
+            val deniedPermissions = mutableListOf<String>()
+            for (i in permissions.indices) {
+                if (grantResults[i] == PackageManager.PERMISSION_DENIED) {
+                    deniedPermissions.add(permissions[i])
+                }
+            }
+
+            if (deniedPermissions.isNotEmpty()) {
+                // All permissions are granted, proceed with Bluetooth operations
+                Toast.makeText(this, "${deniedPermissions.joinToString(", ")}", Toast.LENGTH_LONG).show()
+            } else {
+                // Permissions are denied, show a message to the user
+                bleHandler = BLEHandler(this)
+            }
+        }
+    }
+
+    // ---------------------------------------------------------------------------------------------
+
+    @SuppressLint("MissingPermission")
+    fun showPairedDevices(){
+        val pairedDevices : Set<BluetoothDevice>? = bleHandler.getPairedDevices()
+        val dialogView = layoutInflater.inflate(R.layout.custom_dialog, null)
+        val parentLayout: LinearLayout = dialogView.findViewById(R.id.dialog_parent)
+
+        val dialogBuilder = AlertDialog.Builder(this)
+            .setView(dialogView)
+            .setTitle("Paired Devices")
+            .setPositiveButton("OK") { dialog, _ ->
+                dialog.dismiss()
+            }
+
+        val alertDialog = dialogBuilder.create()
+        //add devices layout
+        val inflater: LayoutInflater = LayoutInflater.from(this)
+        if (pairedDevices != null) {
+            for(item in pairedDevices){
+                val itemView: View = inflater.inflate(R.layout.dialog_item_layout, parentLayout, false)
+                val itemButton: Button  = itemView.findViewById(R.id.dialog_item_button)
+                itemButton.text = item.name
+                itemButton.setOnClickListener {
+                     bleHandler.connectPairedDevice(item.address)
+                    alertDialog.dismiss()
+                }
+                parentLayout.addView(itemView)
+
+            }
+        }else{
+            val itemView: View = inflater.inflate(R.layout.dialog_item_layout, parentLayout, false)
+            val itemButton: Button  = itemView.findViewById(R.id.dialog_item_button)
+            itemButton.text = "no devices"
+            parentLayout.addView(itemView)
+        }
+
+
+        alertDialog.show()
+    }
+
+
+
 
     // ---------------------------------------------------------------------------------------------
 
@@ -260,18 +334,33 @@ class SettingsActivity : AppCompatActivity() {
     // ---------------------------------------------------------------------------------------------
 
     fun scanBleDevice(){
-        bleHandler.setUpLogging()
+        val filters: List<ScanFilter> = emptyList()
+        val settings: ScanSettings = ScanSettings.Builder()
+            .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY)
+            .build()
+       // bleHandler.setUpLogging()
+        bleHandler.setUpLoggingWithFilter(filters,settings)
     }
 
     fun stopScanBleDevice(){
         bleHandler.stopScanDevice()
         val scanResult = bleHandler.getBLEValues()
-        displayScanResults(scanResult)
+        val scanDeviceResult = bleHandler.getBlEDeviceValues();
+        displayScanResults(scanResult, scanDeviceResult)
     }
-    private fun displayScanResults(scanResults: MutableList<String>) {
+
+    @SuppressLint("MissingPermission")
+    private fun displayScanResults(scanResults: MutableList<String>, scanDevicesResults:MutableList<BluetoothDevice>) {
         // Display or process the scan results
+        val targetMacAddress = "90:F0:52:BD:C1:24"
         scanResults.forEach { result ->
             Log.d("ScanResult", result)
+        }
+        scanDevicesResults.forEach{ result ->
+            Log.d("ScanResultDevice", "${result.getAddress()}:${result.type}:${result.name}")
+            if(result.address.equals(targetMacAddress)){
+                Log.d("found the target device", "found the target device")
+            }
         }
     }
 
