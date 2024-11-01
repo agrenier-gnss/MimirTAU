@@ -2,12 +2,16 @@ package com.mobilewizards.logging_app
 
 import android.Manifest
 import android.app.Activity
+import android.app.AlertDialog
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
+import android.util.Log
+import android.view.LayoutInflater
 import android.view.View
 import android.widget.Button
 import androidx.core.app.ActivityCompat
+import com.google.android.gms.wearable.Wearable
 import com.mobilewizards.logging_app.databinding.ActivitySelectionBinding
 
 class SelectionActivity: Activity() {
@@ -38,9 +42,44 @@ class SelectionActivity: Activity() {
         }
 
         sendSurveysBtn.setOnClickListener {
-            val openSendSurveys = Intent(this, SendSurveysActivity::class.java)
-            startActivity(openSendSurveys)
+            //TODO: move to separate Class file/own function for clean code
+            val nodeClient = Wearable.getNodeClient(applicationContext)
+            //val dialogView = LayoutInflater.from(this).inflate(R.layout.send_survey_to_phone_pair_checker, null)
+
+            // Disable the button to prevent multiple clicks while checking for nodes
+            sendSurveysBtn.isEnabled = false
+
+            nodeClient.connectedNodes.addOnSuccessListener { nodes ->
+                val validWearableNodes = nodes.filter { node ->
+                    node.isNearby
+                }
+
+                if (validWearableNodes.isEmpty()) {
+                    Log.e("pairing", "No paired device found.")
+                    //TODO: proper layout for dialog
+                    AlertDialog.Builder(this@SelectionActivity)
+                        //.setView(dialogView)
+                        .setTitle("Pairing Error")
+                        .setMessage("No paired smartphone found. Please pair before proceeding.")
+                        //boot leg version of button before proper xml version is implemented
+                        .setPositiveButton("            OK (clickhere)") { dialog, _ ->
+                            dialog.dismiss()
+
+                            sendSurveysBtn.isEnabled = true
+                        }
+                        .show()
+                } else {
+                    Log.d("pairing", "Device is paired and connected.")
+                    val openSendSurveys = Intent(this, SendSurveysActivity::class.java)
+                    startActivity(openSendSurveys)
+                }
+            }.addOnFailureListener { exception ->
+                Log.e("pairing", "Failed to get connected nodes: ${exception.message}")
+                sendSurveysBtn.isEnabled = true
+            }
         }
+
+
     }
 
     // =============================================================================================
