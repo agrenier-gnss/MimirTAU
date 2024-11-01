@@ -34,6 +34,7 @@ import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import java.security.MessageDigest
 
 
 private const val COMMENT_START = "#"
@@ -288,6 +289,11 @@ class SendSurveysActivity: Activity() {
             e.printStackTrace()
         }
 
+        // Generate the checksum for the file
+        val fileData = csvFile.readBytes()
+        val checksum = generateChecksum(fileData)
+        Log.d(TAG, "File checksum: $checksum")
+
         // Getting channelClient for sending the file
         val channelClient = Wearable.getChannelClient(context)
         val callback = object: ChannelClient.ChannelCallback() {
@@ -297,6 +303,7 @@ class SendSurveysActivity: Activity() {
                 channelClient.sendFile(channel, csvFile.toUri()).addOnCompleteListener { task ->
                     if (task.isSuccessful) {
                         WatchActivityHandler.fileSendStatus(true)
+                        sendChecksumToPhone(checksum, nodeId, context)
                         fileSendSuccessful()
                         channelClient.close(channel)
                     } else {
@@ -334,8 +341,30 @@ class SendSurveysActivity: Activity() {
             }
         }
     }
-}
 
+    // =============================================================================================
+
+    // generate a SHA-256 checksum for data corruption check between smartphone and watch file
+    // transfer
+    private fun generateChecksum(data: ByteArray): String {
+        val digest = MessageDigest.getInstance("SHA-256")
+        val hashBytes = digest.digest(data)
+        return hashBytes.joinToString("") { "%02x".format(it) }
+    }
+
+    private fun sendChecksumToPhone(checksum: String, nodeId: String, context: Context) {
+        val messageClient = Wearable.getMessageClient(context)
+        val checksumPath = "$CSV_FILE_CHANNEL_PATH/checksum"
+
+        messageClient.sendMessage(nodeId, checksumPath, checksum.toByteArray()).addOnCompleteListener { task ->
+            if (task.isSuccessful) {
+                Log.d(TAG, "Checksum sent successfully")
+            } else {
+                Log.e(TAG, "Error sending checksum: ${task.exception}")
+            }
+        }
+    }
+}
 
 // Separate class for RecyclerView items in RecyclerView activity_send_surveys.xml
 class FilesAdapter(
