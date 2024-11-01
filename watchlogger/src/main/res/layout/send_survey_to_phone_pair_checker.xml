@@ -8,12 +8,12 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="No paired smartphone found. Please pair with the device before proceeding."
+        android:text="@string/no_paired_smartphone_found_please_pair_with_the_device_before_proceeding"
         android:textAppearance="?android:attr/textAppearanceMedium" />
 
     <Button
         android:id="@+id/closeDialogButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="OK" />
+        android:text="@string/ok" />
 </LinearLayout>
