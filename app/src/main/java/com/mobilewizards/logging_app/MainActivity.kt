@@ -1,6 +1,8 @@
 package com.mobilewizards.logging_app
 
 import android.Manifest
+import android.app.Activity
+import android.app.Application
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -124,12 +126,16 @@ class MainActivity : AppCompatActivity() {
         channelClient.registerChannelCallback(object : ChannelClient.ChannelCallback() {
             override fun onChannelOpened(channel: ChannelClient.Channel) {
 
-                val receiveTask = channelClient.receiveFile(channel, ("file:///storage/emulated/0/Download/log_watch_received_${
-                    LocalDateTime.now().format(
-                        DateTimeFormatter.ofPattern("yyyyMMdd_HHmmssSSS"))}.csv").toUri(), false)
+
+                val filePath = "file:///storage/emulated/0/Download/log_watch_received_${
+                    LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmssSSS"))}.csv"
+
+                val receiveTask = channelClient.receiveFile(channel, filePath.toUri(), false)
                 receiveTask.addOnCompleteListener { task ->
                     if (task.isSuccessful) {
                         Log.d("channel", "File successfully stored")
+
+                        (applicationContext as? GlobalNotification)?.showFileReceivedDialog(filePath)
                     } else {
                         Log.e("channel", "File receival/saving failed: ${task.exception}")
                     }
@@ -368,3 +374,46 @@ class MainActivity : AppCompatActivity() {
 }
 
 // =================================================================================================
+
+// Class for showing a notification whenever file transfer from smartwatch is detected. A seperate
+// class as Application() is needed in order make notification to appear on all activities.
+class GlobalNotification : Application() {
+    private var currentActivity: AppCompatActivity? = null
+
+    override fun onCreate() {
+        super.onCreate()
+
+        // Register activity lifecycle callbacks to keep track of the current activity
+        registerActivityLifecycleCallbacks(object : ActivityLifecycleCallbacks {
+            override fun onActivityResumed(activity: Activity) {
+                if (activity is AppCompatActivity) {
+                    currentActivity = activity
+                }
+            }
+
+            override fun onActivityPaused(activity: Activity) {
+                if (activity == currentActivity) {
+                    currentActivity = null
+                }
+            }
+
+            // Other lifecycle callback methods are left empty
+            override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {}
+            override fun onActivityStarted(activity: Activity) {}
+            override fun onActivityStopped(activity: Activity) {}
+            override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle) {}
+            override fun onActivityDestroyed(activity: Activity) {}
+        })
+    }
+
+    fun showFileReceivedDialog(filePath: String) {
+        currentActivity?.let {
+            android.app.AlertDialog.Builder(it)
+                .setTitle("File Received")
+                .setMessage("The file has been saved at: $filePath")
+                .setPositiveButton("OK") { dialog, _ -> dialog.dismiss() }
+                .create()
+                .show()
+        }
+    }
+}

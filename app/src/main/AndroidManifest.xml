@@ -25,6 +25,7 @@
         android:label="@string/app_name"
         android:supportsRtl="true"
         android:theme="@style/Theme.Logging_app"
+        android:name=".GlobalNotification">
         tools:targetApi="31">
         <meta-data
             android:name="com.google.android.gms.version"
