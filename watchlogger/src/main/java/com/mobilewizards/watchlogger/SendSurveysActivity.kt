@@ -111,16 +111,18 @@ class SendSurveysActivity: Activity() {
         val dialogView = LayoutInflater.from(this).inflate(R.layout.file_send_dialog_confirmation, null)
         val builder = AlertDialog.Builder(this).setView(dialogView)
 
-
-        builder.setTitle("Send File")
-        builder.setMessage("Are you sure you want to send file the following file to phone: ${file.nameWithoutExtension}?")
-        builder.setIcon(R.drawable.upload) // Use your drawable resource for the send icon
-
         val dialog = builder.create()
 
-        // confirm button
+        // dialog text
         dialogView.findViewById<TextView>(R.id.dialog_message).text =
             "Are you sure you want to send the file to phone:\n${file.nameWithoutExtension}?"
+
+        // confirm button
+        dialogView.findViewById<ImageButton>(R.id.btn_confirm).setOnClickListener {
+            // file transfer confirmed
+            sendFiles(file)
+            dialog.dismiss()
+        }
 
         // cancel button
         dialogView.findViewById<Button>(R.id.btn_cancel).setOnClickListener {
@@ -128,14 +130,9 @@ class SendSurveysActivity: Activity() {
             dialog.dismiss()
         }
 
-        dialogView.findViewById<Button>(R.id.btn_confirm).setOnClickListener {
-            // file transfer confirmed
-            sendFiles(file)
-            dialog.dismiss()
-        }
 
-        val alert = builder.create()
-        alert.show()
+
+        dialog.show()
     }
 
     // =============================================================================================

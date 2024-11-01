@@ -3,45 +3,44 @@
 <!-- The items that are in RecyclerView in activity_send_surveys.xml -->
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:layout_width="match_parent"
+    android:layout_width="140dp"
     android:layout_height="wrap_content"
     android:background="@drawable/item_background"
     android:padding="3dp"
     android:layout_margin="3dp">
 
+
     <TextView
         android:id="@+id/fileNameTextView"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:textSize="11sp"
+        android:textSize="10sp"
         android:textColor="@android:color/black"
-        app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintEnd_toStartOf="@id/circularButton" />
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
 
     <TextView
         android:id="@+id/fileCreationTimeTextView"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:textSize="11sp"
+        android:textSize="12sp"
         android:textColor="@android:color/black"
-        app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/fileNameTextView"
-        app:layout_constraintEnd_toStartOf="@id/circularButton" />
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintBottom_toTopOf="@id/circularButton" />
 
     <ImageButton
         android:id="@+id/circularButton"
-        android:layout_width="18dp"
-        android:layout_height="18dp"
+        android:layout_width="40dp"
+        android:layout_height="25dp"
         android:background="@drawable/blue_circular_button_background"
         android:src="@drawable/upload"
         android:padding="3dp"
         android:layout_marginEnd="8dp"
         android:scaleType="centerInside"
         android:contentDescription="circular_button"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
-
-
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent" />
 </androidx.constraintlayout.widget.ConstraintLayout>

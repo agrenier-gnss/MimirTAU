@@ -67,10 +67,14 @@
 
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/filesRecyclerView"
-                android:layout_width="match_parent"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:clipToPadding="false"
                 android:nestedScrollingEnabled="true"
-                android:clipToPadding="false" />
+                android:padding="8dp"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent" />
 
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
