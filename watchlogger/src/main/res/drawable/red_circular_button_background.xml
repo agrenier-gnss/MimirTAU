@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <solid android:color="@android:color/holo_red_light" /> <!-- Blue color -->
+    <corners android:radius="10dp" /> <!-- Set a high radius to make it circular -->
+    <size
+        android:width="36dp"
+        android:height="36dp" /> <!-- Set fixed width and height -->
+</shape>

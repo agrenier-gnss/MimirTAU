@@ -29,18 +29,36 @@
         app:layout_constraintTop_toBottomOf="@id/fileNameTextView"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintBottom_toTopOf="@id/circularButton" />
+        app:layout_constraintBottom_toTopOf="@id/fileSendButton" />
 
     <ImageButton
-        android:id="@+id/circularButton"
+        android:id="@+id/fileSendButton"
         android:layout_width="40dp"
         android:layout_height="25dp"
         android:background="@drawable/blue_circular_button_background"
         android:src="@drawable/upload"
         android:padding="3dp"
-        android:layout_marginEnd="8dp"
+        android:layout_marginEnd="4dp"
         android:scaleType="centerInside"
-        android:contentDescription="circular_button"
+        android:contentDescription="Button for sending file to phone"
         app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/fileCreationTimeTextView"
+        app:layout_constraintEnd_toStartOf="@id/fileDeleteButton"
         app:layout_constraintBottom_toBottomOf="parent" />
+
+    <ImageButton
+        android:id="@+id/fileDeleteButton"
+        android:layout_width="40dp"
+        android:layout_height="25dp"
+        android:background="@drawable/red_circular_button_background"
+        android:src="@drawable/trashcan"
+        android:padding="3dp"
+        android:scaleType="centerInside"
+        android:contentDescription="Button for deleting the file from the watch"
+        app:layout_constraintStart_toEndOf="@id/fileSendButton"
+        app:layout_constraintTop_toBottomOf="@id/fileCreationTimeTextView"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent" />
+
+
 </androidx.constraintlayout.widget.ConstraintLayout>
