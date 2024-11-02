@@ -12,7 +12,9 @@ import android.content.pm.PackageManager
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.os.Handler
+import android.os.Looper
 import android.os.SystemClock
+import android.provider.MediaStore
 import android.util.Log
 import android.view.View
 import android.widget.Button
@@ -23,13 +25,17 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
 import com.google.android.gms.wearable.ChannelClient
+import com.google.android.gms.wearable.MessageEvent
 import com.google.android.gms.wearable.Wearable
+import com.google.android.gms.wearable.WearableListenerService
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import com.mimir.sensors.LoggingService
 import com.mimir.sensors.SensorType
+import java.io.File
 import java.io.Serializable
 import java.lang.reflect.Type
+import java.security.MessageDigest
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
@@ -51,6 +57,10 @@ class MainActivity : AppCompatActivity() {
     private lateinit var sharedPreferences: SharedPreferences
 
     private var sensorTextViewList = mutableMapOf<SensorType, TextView>()
+
+    private val CSV_FILE_CHANNEL_PATH = MediaStore.Downloads.EXTERNAL_CONTENT_URI
+
+    private val fileAccessLock = Object()
 
     // ---------------------------------------------------------------------------------------------
 
@@ -126,16 +136,25 @@ class MainActivity : AppCompatActivity() {
         channelClient.registerChannelCallback(object : ChannelClient.ChannelCallback() {
             override fun onChannelOpened(channel: ChannelClient.Channel) {
 
-
                 val filePath = "file:///storage/emulated/0/Download/log_watch_received_${
                     LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmssSSS"))}.csv"
 
                 val receiveTask = channelClient.receiveFile(channel, filePath.toUri(), false)
                 receiveTask.addOnCompleteListener { task ->
                     if (task.isSuccessful) {
-                        Log.d("channel", "File successfully stored")
-
-                        (applicationContext as? GlobalNotification)?.showFileReceivedDialog(filePath)
+                        // Synchronize using the lock object. Only allow one thread/process to access
+                        // the file at same time Handler looper delay needed since file appears
+                        // as 0 bytes immediately after being saved into memory
+                        synchronized(fileAccessLock) {
+                            Handler(Looper.getMainLooper()).postDelayed({
+                                synchronized(fileAccessLock) {
+                                    Log.d("FileContent", "File content: ${filePath.length}")
+                                    Log.d("ChecksumListener", "File path synchro:" +
+                                            " ${generateChecksum(File(filePath).readBytes())}");
+                                }
+                            }, 1000)
+                        }
+                        (applicationContext as? GlobalNotification)?.showFileReceivedDialog(filePath.toString())
                     } else {
                         Log.e("channel", "File receival/saving failed: ${task.exception}")
                     }
@@ -371,6 +390,12 @@ class MainActivity : AppCompatActivity() {
         durationHandler.removeCallbacks(updateRunnableDuration)
         super.onDestroy()
     }
+
+    private fun generateChecksum(data: ByteArray): String {
+        val digest = MessageDigest.getInstance("SHA-256")
+        val hashBytes = digest.digest(data)
+        return hashBytes.joinToString("") { "%02x".format(it) }
+    }
 }
 
 // =================================================================================================
@@ -415,5 +440,28 @@ class GlobalNotification : Application() {
                 .create()
                 .show()
         }
+    }
+}
+
+class ChecksumListenerService : WearableListenerService() {
+
+    private val CSV_FILE_CHANNEL_PATH = MediaStore.Downloads.EXTERNAL_CONTENT_URI
+
+    override fun onMessageReceived(messageEvent: MessageEvent) {
+        // Check if the message path matches the one used for sending the checksum
+        if (messageEvent.path == CSV_FILE_CHANNEL_PATH.toString()) {
+            // Convert the byte array back to a String
+            val checksum = String(messageEvent.data)
+            Log.d("ChecksumListener", "Received checksum: $checksum")
+
+            verifyChecksum(checksum)
+        } else {
+            super.onMessageReceived(messageEvent)
+        }
+    }
+
+    private fun verifyChecksum(checksum: String) {
+        //TODO: Compare checksum to expected values or use it for validation
+        Log.d("ChecksumListener", "Verifying checksum: $checksum")
     }
 }

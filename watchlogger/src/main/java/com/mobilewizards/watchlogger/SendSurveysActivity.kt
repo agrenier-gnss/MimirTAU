@@ -62,7 +62,6 @@ class SendSurveysActivity: Activity() {
         val surveyToMenuBtn = findViewById<Button>(R.id.surveyToMenuBtn)
 
         Log.d(TAG, "toPhoneBtn: $toPhoneBtn, surveyToMenuBtn: $surveyToMenuBtn")
-
         WatchActivityHandler.getFilePaths().forEach { path ->
             filePaths.add(path)
         }
@@ -354,11 +353,11 @@ class SendSurveysActivity: Activity() {
 
     private fun sendChecksumToPhone(checksum: String, nodeId: String, context: Context) {
         val messageClient = Wearable.getMessageClient(context)
-        val checksumPath = "$CSV_FILE_CHANNEL_PATH/checksum"
+        val checksumPath = "$CSV_FILE_CHANNEL_PATH"
 
         messageClient.sendMessage(nodeId, checksumPath, checksum.toByteArray()).addOnCompleteListener { task ->
             if (task.isSuccessful) {
-                Log.d(TAG, "Checksum sent successfully")
+                Log.d("ChecksumListener", "Checksum sent successfully. Value: $checksum")
             } else {
                 Log.e(TAG, "Error sending checksum: ${task.exception}")
             }
