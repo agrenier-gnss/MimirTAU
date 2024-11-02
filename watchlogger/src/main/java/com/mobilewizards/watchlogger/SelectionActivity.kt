@@ -60,14 +60,17 @@ class SelectionActivity: Activity() {
                     AlertDialog.Builder(this@SelectionActivity)
                         //.setView(dialogView)
                         .setTitle("Pairing Error")
-                        .setMessage("No paired smartphone found. Please pair before proceeding.")
+                        .setMessage("No paired smartphone found. Please pair before survey transfer.")
                         //boot leg version of button before proper xml version is implemented
                         .setPositiveButton("            OK (clickhere)") { dialog, _ ->
                             dialog.dismiss()
 
                             sendSurveysBtn.isEnabled = true
+                            val openSendSurveys = Intent(this, SendSurveysActivity::class.java)
+                            startActivity(openSendSurveys)
                         }
                         .show()
+
                 } else {
                     Log.d("pairing", "Device is paired and connected.")
                     val openSendSurveys = Intent(this, SendSurveysActivity::class.java)
