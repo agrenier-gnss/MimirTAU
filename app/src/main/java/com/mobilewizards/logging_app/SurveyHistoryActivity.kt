@@ -5,6 +5,7 @@ import android.content.Intent
 import android.net.Uri
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import android.os.Environment
 import android.os.StrictMode
 import android.util.Log
 import android.view.MotionEvent
@@ -71,8 +72,8 @@ class SurveyHistoryActivity : AppCompatActivity() {
     fun populateView(parentView: ViewGroup) {
         parentView.removeAllViews()
 
-        val path = "/storage/emulated/0/Download/"
-        val folder = File(path)
+        val path = applicationContext.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)?.absolutePath
+        val folder = File(path.toString())
 
         folder.listFiles()?.forEach { file ->
             // Inflate the layout file that contains the TableLayout

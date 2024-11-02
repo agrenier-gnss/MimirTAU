@@ -11,6 +11,7 @@ import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import android.os.Environment
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
@@ -33,6 +34,8 @@ import com.google.gson.reflect.TypeToken
 import com.mimir.sensors.LoggingService
 import com.mimir.sensors.SensorType
 import java.io.File
+import java.io.FileInputStream
+import java.io.IOException
 import java.io.Serializable
 import java.lang.reflect.Type
 import java.security.MessageDigest
@@ -136,10 +139,11 @@ class MainActivity : AppCompatActivity() {
         channelClient.registerChannelCallback(object : ChannelClient.ChannelCallback() {
             override fun onChannelOpened(channel: ChannelClient.Channel) {
 
-                val filePath = "file:///storage/emulated/0/Download/log_watch_received_${
+                val fileName = "log_watch_received_${
                     LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmssSSS"))}.csv"
+                val file = File(applicationContext.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS), fileName)
 
-                val receiveTask = channelClient.receiveFile(channel, filePath.toUri(), false)
+                val receiveTask = channelClient.receiveFile(channel, file.toUri(), false)
                 receiveTask.addOnCompleteListener { task ->
                     if (task.isSuccessful) {
                         // Synchronize using the lock object. Only allow one thread/process to access
@@ -148,13 +152,14 @@ class MainActivity : AppCompatActivity() {
                         synchronized(fileAccessLock) {
                             Handler(Looper.getMainLooper()).postDelayed({
                                 synchronized(fileAccessLock) {
-                                    Log.d("FileContent", "File content: ${filePath.length}")
-                                    Log.d("ChecksumListener", "File path synchro:" +
-                                            " ${generateChecksum(File(filePath).readBytes())}");
+                                    Log.d("ChecksumListener", "Received log checksum" +
+                                            " ${generateChecksum(file.readBytes())}");
+                                    //TODO: make function to compare smartwatch checksum from
+                                    // ChecksumListenerService class
                                 }
                             }, 1000)
                         }
-                        (applicationContext as? GlobalNotification)?.showFileReceivedDialog(filePath.toString())
+                        (applicationContext as? GlobalNotification)?.showFileReceivedDialog(file.toString())
                     } else {
                         Log.e("channel", "File receival/saving failed: ${task.exception}")
                     }
