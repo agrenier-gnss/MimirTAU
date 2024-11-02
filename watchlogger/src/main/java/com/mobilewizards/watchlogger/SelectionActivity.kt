@@ -60,7 +60,8 @@ class SelectionActivity: Activity() {
                     AlertDialog.Builder(this@SelectionActivity)
                         //.setView(dialogView)
                         .setTitle("Pairing Error")
-                        .setMessage("No paired smartphone found. Please pair before survey transfer.")
+                        .setMessage("No paired smartphone found. Please pair before " +
+                                "attempting file transfer")
                         //boot leg version of button before proper xml version is implemented
                         .setPositiveButton("            OK (clickhere)") { dialog, _ ->
                             dialog.dismiss()
