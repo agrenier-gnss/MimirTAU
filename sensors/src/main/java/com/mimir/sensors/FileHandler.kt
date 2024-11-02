@@ -10,6 +10,7 @@ import android.os.Handler
 import android.os.Looper
 import android.os.Message
 import android.provider.MediaStore
+import android.util.Log
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
@@ -53,16 +54,19 @@ class FileHandler (context: Context, looper: Looper): Handler(looper) {
 
     // ---------------------------------------------------------------------------------------------
 
-    fun saveInExternalStorage(context: Context, filename: String){
+    fun saveInExternalStorage(context: Context, filename: String) {
 
-        // Defining Download directory
-        val contentValues = ContentValues().apply {
-            put(MediaStore.Downloads.DISPLAY_NAME, filename)
-            put(MediaStore.Downloads.MIME_TYPE, "text/txt")
-            put(MediaStore.Downloads.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
+        // save in /storage/emulated/0/Android/data/com.mobilewizards.logging_app/files/Download
+        val file = File(context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS), filename)
+
+        // Ensure the directory exists
+        file.parentFile?.mkdirs()
+
+        try {
+            mOutputStream = FileOutputStream(file)
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
-        val uri = context.contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, contentValues) as Uri
-        mOutputStream = context.contentResolver.openOutputStream(uri) as OutputStream
     }
 
     // ---------------------------------------------------------------------------------------------
