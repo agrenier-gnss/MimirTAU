@@ -2,16 +2,11 @@ package com.mobilewizards.logging_app
 
 import android.Manifest
 import android.app.Activity
-import android.app.AlertDialog
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
-import android.util.Log
-import android.view.LayoutInflater
-import android.view.View
 import android.widget.Button
 import androidx.core.app.ActivityCompat
-import com.google.android.gms.wearable.Wearable
 import com.mobilewizards.logging_app.databinding.ActivitySelectionBinding
 
 class SelectionActivity: Activity() {
