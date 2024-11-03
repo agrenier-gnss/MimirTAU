@@ -61,10 +61,6 @@ class MainActivity : AppCompatActivity() {
 
     private var sensorTextViewList = mutableMapOf<SensorType, TextView>()
 
-    private val CSV_FILE_CHANNEL_PATH = MediaStore.Downloads.EXTERNAL_CONTENT_URI
-
-    private val fileAccessLock = Object()
-
     // ---------------------------------------------------------------------------------------------
 
     private val sensorCheckReceiver = object : BroadcastReceiver() {
