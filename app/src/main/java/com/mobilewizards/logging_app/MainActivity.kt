@@ -3,6 +3,7 @@ package com.mobilewizards.logging_app
 import android.Manifest
 import android.app.Activity
 import android.app.Application
+import com.google.android.material.snackbar.Snackbar
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -143,18 +144,17 @@ class MainActivity : AppCompatActivity() {
 
         // Register the receiver to listen for checksum broadcasts
         registerReceiver(checksumReceiver, IntentFilter("com.example.ACTION_VERIFY_CHECKSUM"))
-
         // Create communication with the watch
         val channelClient = Wearable.getChannelClient(applicationContext)
         channelClient.registerChannelCallback(object : ChannelClient.ChannelCallback() {
             override fun onChannelOpened(channel: ChannelClient.Channel) {
-
                 val fileName = "log_watch_received_${
                     LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmssSSS"))}.csv"
                 file = File(applicationContext.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS), fileName)
 
                 val receiveTask = channelClient.receiveFile(channel, file.toUri(), false)
                 receiveTask.addOnCompleteListener { task ->
+
                     if (task.isSuccessful) {
                         Log.d("channel", "File successfully stored")
                         (applicationContext as? GlobalNotification)?.showFileReceivedDialog(file.toString())
@@ -396,10 +396,13 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun verifyChecksum(context: Context, file: File, expectedChecksum: String) {
-        // Synchronize using the lock object. Only allow one thread/process to access
-        // the file at the same time.
         synchronized(fileAccessLock) {
-            waitForFileTransfer(file) { isTransferComplete ->
+            val rootView = (context as Activity).findViewById<View>(android.R.id.content)
+            val snackbar = Snackbar.make(rootView, "Receiving file... Size: 0 KB", Snackbar.LENGTH_INDEFINITE)
+            snackbar.show()
+
+            waitForFileTransfer(file, snackbar) { isTransferComplete ->
+
                 if (isTransferComplete) {
                     synchronized(fileAccessLock) {
                         try {
@@ -423,29 +426,39 @@ class MainActivity : AppCompatActivity() {
                         }
                     }
                 } else {
-                    Log.w("verifyChecksum", "File transfer is still in progress;" +
-                            " checksum verification skipped.")
+                    Log.w("verifyChecksum", "File transfer is still in progress; checksum verification skipped.")
                 }
             }
         }
     }
 
-    // this function waits until it is fully transferred
-    // into phone storage before verifying file integrity
-    private fun waitForFileTransfer(file: File, callback: (Boolean) -> Unit) {
-        val initialSize = file.length()
-        var lastSize = initialSize
+    private fun waitForFileTransfer(file: File, snackbar: Snackbar, callback: (Boolean) -> Unit) {
         val handler = Handler(Looper.getMainLooper())
+        var lastSize = file.length()
+        var unchangedSizeCount = 0
 
-        // Check the file size every 500ms
         val checkRunnable = object : Runnable {
             override fun run() {
                 val currentSize = file.length()
                 if (currentSize == lastSize) {
-                    // If the size has not changed, assume the transfer is complete
-                    callback(true)
+                    unchangedSizeCount++
+                    // Confirm the file size hasn't changed for 3 consecutive checks before completing
+                    if (unchangedSizeCount >= 3) {
+                        snackbar.dismiss()
+                        callback(true)
+                    } else {
+                        handler.postDelayed(this, 500)
+                    }
                 } else {
                     lastSize = currentSize
+                    unchangedSizeCount = 0
+
+                    val currentSizeMB = currentSize / (1024 * 1024)
+                    val lastSizeMB = file.length() / (1024 * 1024)
+
+                    snackbar.setText("Receiving file... Size: ${currentSizeMB} MB / ${lastSizeMB} MB")
+                        .setAction("Cancel", null).show()
+
                     handler.postDelayed(this, 500)
                 }
             }
@@ -453,8 +466,12 @@ class MainActivity : AppCompatActivity() {
 
         handler.post(checkRunnable)
 
+        // Timeout check (optional)
         handler.postDelayed({
-            callback(false)
+            if (unchangedSizeCount < 3) {
+                callback(false)
+            }
+            snackbar.dismiss()
         }, 10000)
     }
 
