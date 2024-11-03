@@ -56,18 +56,10 @@ class SendSurveysActivity: Activity() {
         binding = ActivitySendSurveysBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        val toPhoneBtn = findViewById<Button>(R.id.SendToPhoneBtn)
         val surveyToMenuBtn = findViewById<Button>(R.id.surveyToMenuBtn)
-
-        Log.d(TAG, "toPhoneBtn: $toPhoneBtn, surveyToMenuBtn: $surveyToMenuBtn")
 
         WatchActivityHandler.getFilePaths().forEach { path ->
             filePaths.add(path)
-        }
-
-        toPhoneBtn.setOnClickListener {
-            // back to the menu screen
-            //sendFiles()
         }
 
         surveyToMenuBtn.setOnClickListener {
@@ -75,11 +67,6 @@ class SendSurveysActivity: Activity() {
             val intent = Intent(this, SelectionActivity::class.java)
             startActivity(intent)
         }
-
-        // possibly add a "toDriveBtn" for sending survey to drive in the future
-        //toDriveBtn.setOnClickListener {
-        //    //
-        //}
 
 
         // File list items
@@ -427,13 +414,17 @@ class FilesAdapter(
 
 ): RecyclerView.Adapter<FilesAdapter.FileViewHolder>() {
 
+    // the action for clicking the buttons
     var onFileSendClick: ((File) -> Unit)? = null
     var onFileDeleteClick: ((File) -> Unit)? = null
 
 
+    // view holder initialization
     inner class FileViewHolder(view: View): RecyclerView.ViewHolder(view) {
         val fileNameTextView: TextView = view.findViewById(R.id.fileNameTextView)
         val fileCreationTimeTextView: TextView = view.findViewById(R.id.fileCreationTimeTextView)
+
+        // possibly add a "toDriveBtn" for sending survey to drive in the future
         val fileSendButton: ImageButton = view.findViewById(R.id.fileSendButton)
         val fileDeleteButton: ImageButton = view.findViewById(R.id.fileDeleteButton)
     }
@@ -443,6 +434,8 @@ class FilesAdapter(
         return FileViewHolder(view)
     }
 
+
+    // for Items on the view holder and what they should display or do
     override fun onBindViewHolder(holder: FileViewHolder, position: Int) {
         val file = filesList[position]
         holder.fileNameTextView.text = file.nameWithoutExtension
@@ -458,7 +451,7 @@ class FilesAdapter(
 
     }
 
-    // file file creation time for displaying
+    // file creation time for displaying
     private fun getFileCreationTime(file: File): String? {
         return try {
             val path = file.toPath()
