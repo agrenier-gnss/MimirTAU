@@ -10,7 +10,7 @@ import android.widget.Button
 import androidx.core.app.ActivityCompat
 import com.mobilewizards.logging_app.databinding.ActivitySelectionBinding
 
-class SelectionActivity : Activity() {
+class SelectionActivity: Activity() {
 
     private lateinit var binding: ActivitySelectionBinding
 
@@ -18,7 +18,6 @@ class SelectionActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
         binding = ActivitySelectionBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
@@ -26,22 +25,22 @@ class SelectionActivity : Activity() {
 
         val startSurveyBtn = findViewById<Button>(R.id.startSurveyBtn)
         val settingsBtn = findViewById<Button>(R.id.settingsBtn)
+        val sendSurveysBtn = findViewById<Button>(R.id.sendSurveysBtn)
 
-        startSurveyBtn.setOnClickListener{
-            launchSettingsActivity()
+        startSurveyBtn.setOnClickListener {
+            val settingsIntent = Intent(this, SettingsActivity::class.java)
+            startActivityForResult(settingsIntent, SETTINGS_REQUEST_CODE)
         }
 
-        settingsBtn.setOnClickListener{
+        settingsBtn.setOnClickListener {
             val openSettings = Intent(applicationContext, SettingsActivity::class.java)
             startActivity(openSettings)
         }
-    }
 
-    // =============================================================================================
-
-    private fun launchSettingsActivity() {
-        val settingsIntent = Intent(this, SettingsActivity::class.java)
-        startActivityForResult(settingsIntent, SETTINGS_REQUEST_CODE)
+        sendSurveysBtn.setOnClickListener {
+            val openSendSurveys = Intent(this, SendSurveysActivity::class.java)
+            startActivity(openSendSurveys)
+        }
     }
 
     // =============================================================================================
@@ -53,7 +52,8 @@ class SelectionActivity : Activity() {
             // Handle the result from the SettingsActivity
             if (resultCode == RESULT_OK) {
                 // The user successfully changed settings
-                launchLoggingActivity()
+                val loggingIntent = Intent(this, LoggingActivity::class.java)
+                startActivity(loggingIntent)
             } else {
                 // The user canceled or there was an issue with settings
                 // Handle accordingly or take appropriate action
@@ -63,15 +63,8 @@ class SelectionActivity : Activity() {
 
     // =============================================================================================
 
-    private fun launchLoggingActivity() {
-        // Start another activity or perform any other action
-        val loggingIntent = Intent(this, LoggingActivity::class.java)
-        startActivity(loggingIntent)
-    }
-
-    // =============================================================================================
-
-    fun checkPermissions() {
+    // Makes sure all permissions are granted
+    private fun checkPermissions() {
         val permissions = arrayOf(
             Manifest.permission.ACCESS_FINE_LOCATION,
             Manifest.permission.ACCESS_COARSE_LOCATION,
