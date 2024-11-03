@@ -213,6 +213,7 @@ class SendSurveysActivity: Activity() {
         WatchActivityHandler.fileSendStatus(fileSendOk)
         val openSendInfo = Intent(applicationContext, FileSendActivity::class.java)
         startActivity(openSendInfo)
+        finish()
     }
 
     // =============================================================================================
@@ -222,6 +223,7 @@ class SendSurveysActivity: Activity() {
         WatchActivityHandler.fileSendStatus(fileSendOk)
         val openSendInfo = Intent(applicationContext, FileSendActivity::class.java)
         startActivity(openSendInfo)
+        finish()
     }
 
     // =============================================================================================

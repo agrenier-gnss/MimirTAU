@@ -424,7 +424,7 @@ class MainActivity : AppCompatActivity() {
 
 // =================================================================================================
 
-// Class for showing a notification whenever file transfer from smartwatch is detected. A seperate
+// Class for showing a notification whenever file transfer from smartwatch is detected. A separate
 // class as Application() is needed in order make notification to appear on all activities.
 class GlobalNotification : Application() {
     private var currentActivity: AppCompatActivity? = null
@@ -485,7 +485,7 @@ class ChecksumListenerService : WearableListenerService() {
         if (messageEvent.path == CSV_FILE_CHANNEL_PATH.toString()) {
             // Convert the byte array back to a String
             val checksum = String(messageEvent.data)
-            Log.d("ChecksumListener", "Received checksum: $checksum")
+            Log.d("verifyChecksum", "Received checksum: $checksum")
 
             // Broadcast the checksum to MainActivity
             val intent = Intent("com.example.ACTION_VERIFY_CHECKSUM")
