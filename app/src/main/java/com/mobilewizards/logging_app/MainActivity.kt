@@ -160,19 +160,7 @@ class MainActivity : AppCompatActivity() {
                 val receiveTask = channelClient.receiveFile(channel, file.toUri(), false)
                 receiveTask.addOnCompleteListener { task ->
                     if (task.isSuccessful) {
-                        // Synchronize using the lock object. Only allow one thread/process to access
-                        // the file at same time Handler looper delay needed since file appears
-                        // as 0 bytes immediately after being saved into memory
-                        synchronized(fileAccessLock) {
-                            Handler(Looper.getMainLooper()).postDelayed({
-                                synchronized(fileAccessLock) {
-                                    Log.d("verifyChecksum", "Received log checksum" +
-                                            " ${generateChecksum(file.readBytes())}");
-                                    //TODO: make function to compare smartwatch checksum from
-                                    // ChecksumListenerService class
-                                }
-                            }, 1000)
-                        }
+                        Log.d("channel", "File successfully stored")
                         (applicationContext as? GlobalNotification)?.showFileReceivedDialog(file.toString())
                     } else {
                         Log.e("channel", "File receival/saving failed: ${task.exception}")
