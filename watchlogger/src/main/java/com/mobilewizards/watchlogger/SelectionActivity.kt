@@ -42,45 +42,8 @@ class SelectionActivity: Activity() {
         }
 
         sendSurveysBtn.setOnClickListener {
-            //TODO: move to separate Class file/own function for clean code
-            val nodeClient = Wearable.getNodeClient(applicationContext)
-            //val dialogView = LayoutInflater.from(this).inflate(R.layout.send_survey_to_phone_pair_checker, null)
-
-            // Disable the button to prevent multiple clicks while checking for nodes
-            sendSurveysBtn.isEnabled = false
-
-            nodeClient.connectedNodes.addOnSuccessListener { nodes ->
-                val validWearableNodes = nodes.filter { node ->
-                    node.isNearby
-                }
-
-                if (validWearableNodes.isEmpty()) {
-                    Log.e("pairing", "No paired device found.")
-                    //TODO: proper layout for dialog
-                    AlertDialog.Builder(this@SelectionActivity)
-                        //.setView(dialogView)
-                        .setTitle("Pairing Error")
-                        .setMessage("No paired smartphone found. Please pair before " +
-                                "attempting file transfer")
-                        //boot leg version of button before proper xml version is implemented
-                        .setPositiveButton("            OK (clickhere)") { dialog, _ ->
-                            dialog.dismiss()
-
-                            sendSurveysBtn.isEnabled = true
-                            val openSendSurveys = Intent(this, SendSurveysActivity::class.java)
-                            startActivity(openSendSurveys)
-                        }
-                        .show()
-
-                } else {
-                    Log.d("pairing", "Device is paired and connected.")
-                    val openSendSurveys = Intent(this, SendSurveysActivity::class.java)
-                    startActivity(openSendSurveys)
-                }
-            }.addOnFailureListener { exception ->
-                Log.e("pairing", "Failed to get connected nodes: ${exception.message}")
-                sendSurveysBtn.isEnabled = true
-            }
+            val openSendSurveys = Intent(this, SendSurveysActivity::class.java)
+            startActivity(openSendSurveys)
         }
 
 

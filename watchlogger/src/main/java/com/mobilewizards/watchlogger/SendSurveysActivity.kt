@@ -339,10 +339,25 @@ class SendSurveysActivity: Activity() {
     // =============================================================================================
 
     private fun getPhoneNodeId(callback: (String?) -> Unit) {
-        Wearable.getNodeClient(this).connectedNodes.addOnSuccessListener { nodes ->
-            callback(nodes.firstOrNull()?.id)
+        val nodeClient = Wearable.getNodeClient(applicationContext)
+        nodeClient.connectedNodes.addOnSuccessListener { nodes ->
+            // Filter for nearby nodes only
+            val nearbyNode = nodes.firstOrNull { it.isNearby }
+
+            // Pass the ID of the first nearby node (or null if none are nearby)
+            callback(nearbyNode?.id)
+
+            if (nearbyNode == null) {
+                Log.e("pairing", "No nearby paired device found.")
+            } else {
+                Log.d("pairing", "Nearby device is paired and connected.")
+            }
+        }.addOnFailureListener { exception ->
+            Log.e("pairing", "Failed to get connected nodes: ${exception.message}")
+            callback(null)
         }
     }
+
 
     // =============================================================================================
 
