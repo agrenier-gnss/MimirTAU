@@ -444,7 +444,7 @@ class SendSurveysActivity: Activity() {
 
         messageClient.sendMessage(nodeId, checksumPath, checksum.toByteArray()).addOnCompleteListener { task ->
             if (task.isSuccessful) {
-                Log.d("ChecksumListener", "Checksum sent successfully. Value: $checksum")
+                Log.d("verifyChecksum", "Checksum sent successfully. Value: $checksum")
             } else {
                 Log.e(TAG, "Error sending checksum: ${task.exception}")
             }

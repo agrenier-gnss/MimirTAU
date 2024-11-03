@@ -20,6 +20,7 @@ import android.util.Log
 import android.view.View
 import android.widget.Button
 import android.widget.TextView
+import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.app.ActivityCompat
@@ -34,8 +35,6 @@ import com.google.gson.reflect.TypeToken
 import com.mimir.sensors.LoggingService
 import com.mimir.sensors.SensorType
 import java.io.File
-import java.io.FileInputStream
-import java.io.IOException
 import java.io.Serializable
 import java.lang.reflect.Type
 import java.security.MessageDigest
@@ -54,6 +53,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var settingsBtn: Button
     private lateinit var dataButton: Button
     private lateinit var loggingText: TextView
+    private lateinit var file: File
 
     lateinit var loggingIntent : Intent
 
@@ -87,6 +87,17 @@ class MainActivity : AppCompatActivity() {
                         entry.value.text = "\u2716"
                         entry.value.setTextColor(colorID)
                     }
+                }
+            }
+        }
+    }
+
+    private val checksumReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            if (intent.action == "com.example.ACTION_VERIFY_CHECKSUM") {
+                val receivedChecksum = intent.getStringExtra("checksum")
+                if (receivedChecksum != null) {
+                    verifyChecksum(context, file, receivedChecksum)
                 }
             }
         }
@@ -134,6 +145,9 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
         supportActionBar?.hide()
 
+        // Register the receiver to listen for checksum broadcasts
+        registerReceiver(checksumReceiver, IntentFilter("com.example.ACTION_VERIFY_CHECKSUM"))
+
         // Create communication with the watch
         val channelClient = Wearable.getChannelClient(applicationContext)
         channelClient.registerChannelCallback(object : ChannelClient.ChannelCallback() {
@@ -141,7 +155,7 @@ class MainActivity : AppCompatActivity() {
 
                 val fileName = "log_watch_received_${
                     LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmssSSS"))}.csv"
-                val file = File(applicationContext.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS), fileName)
+                file = File(applicationContext.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS), fileName)
 
                 val receiveTask = channelClient.receiveFile(channel, file.toUri(), false)
                 receiveTask.addOnCompleteListener { task ->
@@ -152,7 +166,7 @@ class MainActivity : AppCompatActivity() {
                         synchronized(fileAccessLock) {
                             Handler(Looper.getMainLooper()).postDelayed({
                                 synchronized(fileAccessLock) {
-                                    Log.d("ChecksumListener", "Received log checksum" +
+                                    Log.d("verifyChecksum", "Received log checksum" +
                                             " ${generateChecksum(file.readBytes())}");
                                     //TODO: make function to compare smartwatch checksum from
                                     // ChecksumListenerService class
@@ -393,8 +407,29 @@ class MainActivity : AppCompatActivity() {
         // Remove the updateRunnable when the activity is destroyed to prevent memory leaks
         unregisterReceiver(sensorCheckReceiver)
         durationHandler.removeCallbacks(updateRunnableDuration)
+        unregisterReceiver(checksumReceiver)
         super.onDestroy()
     }
+
+    private fun verifyChecksum(context: Context, file: File, expectedChecksum: String) {
+        val notify = GlobalNotification()
+        try {
+            val fileBytes = file.readBytes()
+            val fileChecksum = generateChecksum(fileBytes)
+
+            if (fileChecksum == expectedChecksum) {
+                Log.d("verifyChecksum", "Checksum verification successful. File is intact.")
+                Toast.makeText(context, "File integrity verified.", Toast.LENGTH_SHORT).show()
+            } else {
+                Log.e("verifyChecksum", "Checksum mismatch. File may be corrupted.")
+                notify.showAlertDialog(context, "File Corruption Detected", "The file appears to be corrupted.")
+            }
+        } catch (e: Exception) {
+            Log.e("verifyChecksum", "Error verifying checksum: ${e.message}")
+            notify.showAlertDialog(context, "Error", "An error occurred while verifying the file.")
+        }
+    }
+
 
     private fun generateChecksum(data: ByteArray): String {
         val digest = MessageDigest.getInstance("SHA-256")
@@ -446,6 +481,15 @@ class GlobalNotification : Application() {
                 .show()
         }
     }
+    fun showAlertDialog(context: Context, title: String, message: String) {
+        AlertDialog.Builder(context).apply {
+            setTitle(title)
+            setMessage(message)
+            setPositiveButton("OK") { dialog, _ -> dialog.dismiss() }
+            create()
+            show()
+        }
+    }
 }
 
 class ChecksumListenerService : WearableListenerService() {
@@ -459,14 +503,13 @@ class ChecksumListenerService : WearableListenerService() {
             val checksum = String(messageEvent.data)
             Log.d("ChecksumListener", "Received checksum: $checksum")
 
-            verifyChecksum(checksum)
+            // Broadcast the checksum to MainActivity
+            val intent = Intent("com.example.ACTION_VERIFY_CHECKSUM")
+            intent.putExtra("checksum", checksum)
+            sendBroadcast(intent)
         } else {
             super.onMessageReceived(messageEvent)
         }
     }
 
-    private fun verifyChecksum(checksum: String) {
-        //TODO: Compare checksum to expected values or use it for validation
-        Log.d("ChecksumListener", "Verifying checksum: $checksum")
-    }
 }
