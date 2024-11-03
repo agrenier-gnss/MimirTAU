@@ -454,9 +454,10 @@ class MainActivity : AppCompatActivity() {
                     unchangedSizeCount = 0
 
                     val currentSizeMB = currentSize / (1024 * 1024)
-                    val lastSizeMB = file.length() / (1024 * 1024)
+                    val totalSizeMB = file.length() / (1024 * 1024)
+                    //TODO: capture the file total size from watch or just dont use totalsize
 
-                    snackbar.setText("Receiving file... Size: ${currentSizeMB} MB / ${lastSizeMB} MB")
+                    snackbar.setText("Receiving file... Size: ${currentSizeMB} MB / ${totalSizeMB} MB")
                         .setAction("Cancel", null).show()
 
                     handler.postDelayed(this, 500)
