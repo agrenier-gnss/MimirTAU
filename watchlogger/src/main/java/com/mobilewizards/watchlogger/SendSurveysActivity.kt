@@ -31,7 +31,6 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
-import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import java.security.MessageDigest
@@ -58,17 +57,10 @@ class SendSurveysActivity: Activity() {
         binding = ActivitySendSurveysBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        val toPhoneBtn = findViewById<Button>(R.id.SendToPhoneBtn)
         val surveyToMenuBtn = findViewById<Button>(R.id.surveyToMenuBtn)
 
-        Log.d(TAG, "toPhoneBtn: $toPhoneBtn, surveyToMenuBtn: $surveyToMenuBtn")
         WatchActivityHandler.getFilePaths().forEach { path ->
             filePaths.add(path)
-        }
-
-        toPhoneBtn.setOnClickListener {
-            // back to the menu screen
-            //sendFiles()
         }
 
         surveyToMenuBtn.setOnClickListener {
@@ -77,50 +69,71 @@ class SendSurveysActivity: Activity() {
             startActivity(intent)
         }
 
-        // possibly add a "toDriveBtn" for sending survey to drive in the future
-        //toDriveBtn.setOnClickListener {
-        //    //
-        //}
 
-
-        // ================================== NEW ===============================================
-
-
-        val filesRecyclerView = findViewById<RecyclerView>(R.id.filesRecyclerView)
-
+        // File list items
         val fileList = getSurveyFiles()
+        val filesRecyclerView = findViewById<RecyclerView>(R.id.filesRecyclerView)
+        val filesAdapter = FilesAdapter(fileList, TAG)
 
-        // Button functionality for the buttons in RecyclerView that send or delete files
-        filesRecyclerView.apply {
-            layoutManager = LinearLayoutManager(this@SendSurveysActivity)
-            adapter = FilesAdapter(fileList) { fileItem ->
+        // File send to phone button
+        filesAdapter.onFileSendClick = { fileItem ->
 
-                //Toast.makeText(
-                //    this@SendSurveysActivity, "Clicked: ${fileItem.nameWithoutExtension}", Toast.LENGTH_SHORT
-                //).show()
+            getPhoneNodeId { nodeId ->
+                // Check if there are connected nodes
+                if (nodeId.isNullOrEmpty()) {
+                    // No connection
+                    Toast.makeText(this, "Phone not connected", Toast.LENGTH_SHORT).show()
 
-                fileSendConfirmationPopup(fileItem)
+                } else {
+                    // there is a phone connection
+                    fileSendConfirmationPopup(fileItem)
+                }
+            }
+
+        }
+
+        // File delete from the watch button
+        filesAdapter.onFileDeleteClick = { fileItem ->
+            fileDeleteConfirmationPopup(fileItem) { isDeleted ->
+                // if the file is deleted from the storage, we delete it off the UI list too
+                if (isDeleted) {
+                    filesAdapter.deleteFile(fileItem)
+                }
 
             }
         }
 
+
+        filesRecyclerView.apply {
+            layoutManager = LinearLayoutManager(this@SendSurveysActivity)
+            adapter = filesAdapter
+        }
     }
 
     // =============================================================================================
     private fun fileSendConfirmationPopup(file: File) {
-        val dialogView = LayoutInflater.from(this).inflate(R.layout.file_send_dialog_confirmation, null)
+        val dialogView = LayoutInflater.from(this).inflate(R.layout.file_action_dialog_confirmation, null)
         val builder = AlertDialog.Builder(this).setView(dialogView)
-
-
-        builder.setTitle("Send File")
-        builder.setMessage("Are you sure you want to send file the following file to phone: ${file.nameWithoutExtension}?")
-        builder.setIcon(R.drawable.upload) // Use your drawable resource for the send icon
 
         val dialog = builder.create()
 
-        // confirm button
+        // dialog text
         dialogView.findViewById<TextView>(R.id.dialog_message).text =
             "Are you sure you want to send the file to phone:\n${file.nameWithoutExtension}?"
+
+        // Setting the confirm button to show file sending icon
+        val confirmSendButton = dialogView.findViewById<ImageButton>(R.id.btn_confirm)
+        confirmSendButton.apply {
+            setBackgroundResource(R.drawable.blue_circular_button_background)
+            setImageResource(R.drawable.upload)
+        }
+
+        // confirm button
+        dialogView.findViewById<ImageButton>(R.id.btn_confirm).setOnClickListener {
+            // file transfer confirmed
+            sendFiles(file)
+            dialog.dismiss()
+        }
 
         // cancel button
         dialogView.findViewById<Button>(R.id.btn_cancel).setOnClickListener {
@@ -128,19 +141,55 @@ class SendSurveysActivity: Activity() {
             dialog.dismiss()
         }
 
-        dialogView.findViewById<Button>(R.id.btn_confirm).setOnClickListener {
-            // file transfer confirmed
-            sendFiles(file)
-            dialog.dismiss()
-        }
-
-        val alert = builder.create()
-        alert.show()
+        dialog.show()
     }
 
     // =============================================================================================
 
-    private fun getSurveyFiles(): List<File> {
+
+    private fun fileDeleteConfirmationPopup(file: File, onDeletionResult: (Boolean) -> Unit) {
+        val dialogView = LayoutInflater.from(this).inflate(R.layout.file_action_dialog_confirmation, null)
+        val builder = AlertDialog.Builder(this).setView(dialogView)
+
+        val dialog = builder.create()
+
+
+        // dialog text
+        dialogView.findViewById<TextView>(R.id.dialog_message).text =
+            "Are you sure you want to delete the file from the watch:\n${file.nameWithoutExtension}?"
+
+        // Setting the confirm button to show file deletion trashcan icon
+        val confirmDeletionButton = dialogView.findViewById<ImageButton>(R.id.btn_confirm)
+        confirmDeletionButton.apply {
+            setBackgroundResource(R.drawable.red_circular_button_background)
+            setImageResource(R.drawable.trashcan)
+        }
+
+
+        // confirm button
+        dialogView.findViewById<ImageButton>(R.id.btn_confirm).setOnClickListener {
+            // file deletion confirmed
+            val fileDeleted = deleteFiles(file)
+
+            onDeletionResult(fileDeleted)
+            dialog.dismiss()
+        }
+
+        // cancel button
+        dialogView.findViewById<Button>(R.id.btn_cancel).setOnClickListener {
+            // cancelled
+            onDeletionResult(false)
+            dialog.dismiss()
+
+        }
+
+        dialog.show()
+    }
+
+
+    // =============================================================================================
+
+    private fun getSurveyFiles(): MutableList<File> {
         // app file directory
         Log.d(TAG, filesDir.absolutePath)
         val appFilesDir = File(filesDir.absolutePath)
@@ -153,7 +202,7 @@ class SendSurveysActivity: Activity() {
         }
 
         // get files sorted from the most recent to the oldest
-        return txtFilesList.sortedByDescending { it.lastModified() }
+        return txtFilesList.sortedByDescending { it.lastModified() }.toMutableList()
     }
 
 
@@ -266,6 +315,29 @@ class SendSurveysActivity: Activity() {
 
     // =============================================================================================
 
+    private fun deleteFiles(file: File): Boolean {
+
+        val fileDeleted = file.delete() // Returns true if deletion was successful
+
+        if (fileDeleted) {
+            // Remove file from file adapter list
+            Toast.makeText(
+                this@SendSurveysActivity, "File deleted successfully!", Toast.LENGTH_SHORT
+            ).show()
+            Log.d(TAG, "deleteFiles: file $file successfully deleted from storage")
+            return true
+
+        } else {
+            Toast.makeText(
+                this@SendSurveysActivity, "ERROR: Failed to delete the file", Toast.LENGTH_SHORT
+            ).show()
+            Log.w(TAG, "ERROR: deleteFiles: file $file couldn't be deleted from storage")
+            return false
+        }
+    }
+
+    // =============================================================================================
+
     private fun getPhoneNodeId(callback: (String?) -> Unit) {
         Wearable.getNodeClient(this).connectedNodes.addOnSuccessListener { nodes ->
             callback(nodes.firstOrNull()?.id)
@@ -367,14 +439,23 @@ class SendSurveysActivity: Activity() {
 
 // Separate class for RecyclerView items in RecyclerView activity_send_surveys.xml
 class FilesAdapter(
-    private val filesList: List<File>, private val onButtonClick: (File) -> Unit
+    val filesList: MutableList<File>, private val TAG: String
+
 ): RecyclerView.Adapter<FilesAdapter.FileViewHolder>() {
 
+    // the action for clicking the buttons
+    var onFileSendClick: ((File) -> Unit)? = null
+    var onFileDeleteClick: ((File) -> Unit)? = null
 
+
+    // view holder initialization
     inner class FileViewHolder(view: View): RecyclerView.ViewHolder(view) {
         val fileNameTextView: TextView = view.findViewById(R.id.fileNameTextView)
         val fileCreationTimeTextView: TextView = view.findViewById(R.id.fileCreationTimeTextView)
-        val circularButton: ImageButton = view.findViewById(R.id.circularButton)
+
+        // possibly add a "toDriveBtn" for sending survey to drive in the future
+        val fileSendButton: ImageButton = view.findViewById(R.id.fileSendButton)
+        val fileDeleteButton: ImageButton = view.findViewById(R.id.fileDeleteButton)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): FileViewHolder {
@@ -382,17 +463,24 @@ class FilesAdapter(
         return FileViewHolder(view)
     }
 
+
+    // for Items on the view holder and what they should display or do
     override fun onBindViewHolder(holder: FileViewHolder, position: Int) {
         val file = filesList[position]
         holder.fileNameTextView.text = file.nameWithoutExtension
         holder.fileCreationTimeTextView.text = getFileCreationTime(file)
 
-        holder.circularButton.setOnClickListener {
-            onButtonClick(file)
+        holder.fileSendButton.setOnClickListener {
+            onFileSendClick!!(file) // should never be null when this is called
         }
+
+        holder.fileDeleteButton.setOnClickListener {
+            onFileDeleteClick!!(file) // should never be null when this is called
+        }
+
     }
 
-    // file file creation time for displaying
+    // file creation time for displaying
     private fun getFileCreationTime(file: File): String? {
         return try {
             val path = file.toPath()
@@ -407,6 +495,17 @@ class FilesAdapter(
             null
         }
     }
+
+    // delete the file from the RecyclerView UI list
+    fun deleteFile(fileItem: File) {
+        val index = filesList.indexOf(fileItem)
+        if (index != -1) {
+            Log.d(TAG, "filesAdapter: file: $fileItem deleted from the list")
+            filesList.removeAt(index)
+            notifyItemRemoved(index)
+        }
+    }
+
 
     override fun getItemCount(): Int = filesList.size
 }

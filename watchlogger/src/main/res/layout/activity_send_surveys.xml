@@ -26,38 +26,27 @@
                 android:layout_height="wrap_content"
                 android:gravity="center"
                 android:layout_marginTop="15dp"
-                android:layout_marginBottom="5dp"
+                android:layout_marginBottom="10dp"
                 android:fontFamily="@font/montserrat_bold"
                 android:textColor="@color/fontLogo"
                 android:text="Mimir" />
 
             <TextView
                 android:id="@+id/SendToText"
-                android:layout_width="match_parent"
+                android:layout_width="165dp"
                 android:layout_height="wrap_content"
                 android:gravity="center"
-                android:layout_marginTop="10dp"
-                android:layout_marginBottom="15dp"
+                android:layout_marginBottom="10dp"
                 android:fontFamily="@font/montserrat_regular"
                 android:textColor="@color/fontWhite"
-                android:text="Send survey to" />
-
-            <Button
-                android:id="@+id/SendToPhoneBtn"
-                android:layout_width="140dp"
-                android:layout_height="50dp"
-                android:background="@drawable/button_background"
-                android:layout_marginBottom="15dp"
-                android:fontFamily="@font/montserrat_bold"
-                android:textAllCaps="false"
-                android:textColor="@color/fontBlack"
-                android:text="Phone" />
+                android:textSize="12sp"
+                android:text="Send surveys to phone or delete them from here" />
 
             <Button
                 android:id="@+id/surveyToMenuBtn"
                 android:layout_width="140dp"
                 android:layout_height="50dp"
-                android:layout_marginBottom="15dp"
+                android:layout_marginBottom="5dp"
                 android:background="@drawable/button_background"
                 android:fontFamily="@font/montserrat_bold"
                 android:text="Back"
@@ -67,10 +56,14 @@
 
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/filesRecyclerView"
-                android:layout_width="match_parent"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:clipToPadding="false"
                 android:nestedScrollingEnabled="true"
-                android:clipToPadding="false" />
+                android:padding="8dp"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent" />
 
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
