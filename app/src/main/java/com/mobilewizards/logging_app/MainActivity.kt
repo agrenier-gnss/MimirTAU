@@ -61,6 +61,8 @@ class MainActivity : AppCompatActivity() {
 
     private var sensorTextViewList = mutableMapOf<SensorType, TextView>()
 
+    private val fileAccessLock = Object()
+
     // ---------------------------------------------------------------------------------------------
 
     private val sensorCheckReceiver = object : BroadcastReceiver() {
@@ -98,12 +100,10 @@ class MainActivity : AppCompatActivity() {
             }
         }
     }
-
     // ---------------------------------------------------------------------------------------------
 
     override fun onResume() {
         super.onResume()
-
         timeText = findViewById(R.id.logging_time_text_view)
 
         // Prevent logging button from going to unintended locations
@@ -396,24 +396,67 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun verifyChecksum(context: Context, file: File, expectedChecksum: String) {
-        val notify = GlobalNotification()
-        try {
-            val fileBytes = file.readBytes()
-            val fileChecksum = generateChecksum(fileBytes)
+        // Synchronize using the lock object. Only allow one thread/process to access
+        // the file at the same time.
+        synchronized(fileAccessLock) {
+            waitForFileTransfer(file) { isTransferComplete ->
+                if (isTransferComplete) {
+                    synchronized(fileAccessLock) {
+                        try {
+                            val fileBytes = file.readBytes()
+                            val fileChecksum = generateChecksum(fileBytes)
 
-            if (fileChecksum == expectedChecksum) {
-                Log.d("verifyChecksum", "Checksum verification successful. File is intact.")
-                Toast.makeText(context, "File integrity verified.", Toast.LENGTH_SHORT).show()
-            } else {
-                Log.e("verifyChecksum", "Checksum mismatch. File may be corrupted.")
-                notify.showAlertDialog(context, "File Corruption Detected", "The file appears to be corrupted.")
+                            Log.d("ChecksumListener", "Received log checksum: $fileChecksum")
+
+                            if (fileChecksum == expectedChecksum) {
+                                Log.d("verifyChecksum", "Checksum verification successful. File is intact.")
+                                Toast.makeText(context, "File integrity verified.", Toast.LENGTH_SHORT).show()
+                            } else {
+                                Log.e("verifyChecksum", "Checksum mismatch. File may be corrupted.")
+                                GlobalNotification().showAlertDialog(context, "File Corruption Detected",
+                                    "The file appears to be corrupted during transfer.")
+                            }
+                        } catch (e: Exception) {
+                            Log.e("verifyChecksum", "Error verifying checksum: ${e.message}")
+                            GlobalNotification().showAlertDialog(context, "Error",
+                                "An error occurred while verifying the file.")
+                        }
+                    }
+                } else {
+                    Log.w("verifyChecksum", "File transfer is still in progress;" +
+                            " checksum verification skipped.")
+                }
             }
-        } catch (e: Exception) {
-            Log.e("verifyChecksum", "Error verifying checksum: ${e.message}")
-            notify.showAlertDialog(context, "Error", "An error occurred while verifying the file.")
         }
     }
 
+    // this function waits until it is fully transferred
+    // into phone storage before verifying file integrity
+    private fun waitForFileTransfer(file: File, callback: (Boolean) -> Unit) {
+        val initialSize = file.length()
+        var lastSize = initialSize
+        val handler = Handler(Looper.getMainLooper())
+
+        // Check the file size every 500ms
+        val checkRunnable = object : Runnable {
+            override fun run() {
+                val currentSize = file.length()
+                if (currentSize == lastSize) {
+                    // If the size has not changed, assume the transfer is complete
+                    callback(true)
+                } else {
+                    lastSize = currentSize
+                    handler.postDelayed(this, 500)
+                }
+            }
+        }
+
+        handler.post(checkRunnable)
+
+        handler.postDelayed({
+            callback(false)
+        }, 10000)
+    }
 
     private fun generateChecksum(data: ByteArray): String {
         val digest = MessageDigest.getInstance("SHA-256")
