@@ -5,13 +5,17 @@ import android.annotation.SuppressLint
 import android.bluetooth.BluetoothDevice
 import android.bluetooth.le.ScanFilter
 import android.bluetooth.le.ScanSettings
+import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
+import android.icu.text.SimpleDateFormat
 import android.os.Build
 import androidx.appcompat.app.AlertDialog
 import android.os.Bundle
+import android.os.Environment
+import android.provider.MediaStore
 import android.util.Log
 import android.view.*
 import android.widget.*
@@ -19,21 +23,37 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.SwitchCompat
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.core.net.toUri
+import com.google.android.gms.wearable.ChannelClient
+import com.google.android.gms.wearable.Wearable
 import com.mimir.sensors.SensorType
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import org.json.JSONObject
+import java.io.BufferedReader
+import java.io.File
+import java.io.FileReader
 import java.lang.reflect.Type
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 
 const val IDX_SWITCH   = 0
 const val IDX_SEEKBAR  = 1
 const val IDX_TEXTVIEW = 2
+private const val VERSION_TAG = "Version: "
+private const val COMMENT_START = "# "
 class SettingsActivity : AppCompatActivity() {
 
+
+    private val TAG = "connect: "
     private val sharedPrefName = "DefaultSettings"
+    private val CSV_FILE_CHANNEL_PATH = MediaStore.Downloads.EXTERNAL_CONTENT_URI
     private lateinit var sharedPreferences: SharedPreferences
     private val progressToFrequency = arrayOf(1, 5, 10, 50, 100, 200, 0)
+    private var filePaths = mutableListOf<File>()
     private lateinit var sensorsComponents : MutableMap<String, MutableList<Any?>>
     private lateinit var bleHandler: BLEHandler
+    private var fileSendOk : Boolean = true
     @SuppressLint("ClickableViewAccessibility")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -53,7 +73,25 @@ class SettingsActivity : AppCompatActivity() {
             editor.apply()
         }
         checkAndRequestBluetoothPermissions()
+        val channelClient = Wearable.getChannelClient(applicationContext)
+        channelClient.registerChannelCallback(object : ChannelClient.ChannelCallback() {
+            override fun onChannelOpened(channel: ChannelClient.Channel) {
 
+                val receiveTask = channelClient.receiveFile(channel, ("file:///storage/emulated/0/Download/log_watch_received_${
+                    LocalDateTime.now().format(
+                        DateTimeFormatter.ofPattern("yyyyMMdd_HHmmssSSS"))}.csv").toUri(), false)
+                receiveTask.addOnCompleteListener { task ->
+                    if (task.isSuccessful) {
+                        Log.d("channel", "File successfully stored")
+                    } else {
+                        Log.e("channel", "File receival/saving failed: ${task.exception}")
+                    }
+                }
+            }
+        })
+        AppActivityHandler.getFilePaths().forEach{ path ->
+            filePaths.add(path)
+        }
         // Load from shared preferences
         val sensorsInit = arrayOf("GNSS", "IMU", "PSR", "STEPS")
 
@@ -164,8 +202,197 @@ class SettingsActivity : AppCompatActivity() {
             showPairedDevices()
 
         }
-    }
 
+
+        //control button
+        val btnControl = findViewById<Button>(R.id.button_control)
+        btnControl.setOnClickListener{
+            sendFiles()
+        }
+
+    }
+    @SuppressLint("Range", "SimpleDateFormat")
+    fun sendFiles(){
+        getWatchNodeId { nodeIds ->
+            Log.d(TAG, "Received nodeIds: $nodeIds")
+            // Check if there are connected nodes
+            val connectedNode: String = if (nodeIds.size > 0) nodeIds[0] else ""
+
+            if (connectedNode.isEmpty()) {
+                Log.d(TAG, "no nodes found")
+                Toast.makeText(this, "Watch not connected", Toast.LENGTH_SHORT).show()
+            } else {
+                Log.d(TAG, "nodes found, sending")
+                val currentTimestamp = System.currentTimeMillis()
+                val contentValues = ContentValues().apply {
+                    put(MediaStore.Downloads.DISPLAY_NAME, "setting_app_${SimpleDateFormat("ddMMyyyy_hhmmssSSS").format(currentTimestamp)}.csv")
+                    put(MediaStore.Downloads.MIME_TYPE, "text/csv")
+                    put(MediaStore.Downloads.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
+                }
+
+                //create json data
+                val jsonData = JSONObject()
+                sensorsComponents.forEach { entry ->
+                    val mkey : SensorType = SensorType.TYPE_GNSS
+                    when(entry.key){
+                        "GNSS" -> jsonData.put("GNSS",SensorType.TYPE_GNSS)
+                        "IMU"  -> jsonData.put("IMU",SensorType.TYPE_IMU)
+                        "PSR"  -> jsonData.put("PSR",SensorType.TYPE_PRESSURE)
+                        "STEPS"-> jsonData.put("STEPS",SensorType.TYPE_STEPS)
+                    }
+                }
+                 // Tag for JSON data
+                val jsonTag = "JSON_DATA_START"
+                val uri = this.contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, contentValues)
+                var path = ""
+                uri?.let { mediaUri ->
+                    this.contentResolver.openOutputStream(mediaUri)?.use { outputStream ->
+
+                        outputStream.write(COMMENT_START.toByteArray())
+                        outputStream.write("setting_app_${SimpleDateFormat("ddMMyyyy_hhmmssSSS").format(currentTimestamp)}.csv\n".toByteArray())
+                        outputStream.write(COMMENT_START.toByteArray())
+                        outputStream.write("\n".toByteArray())
+                        outputStream.write(COMMENT_START.toByteArray());
+                        outputStream.write("Header Description:".toByteArray());
+                        outputStream.write("\n".toByteArray())
+                        outputStream.write(COMMENT_START.toByteArray())
+                        outputStream.write("\n".toByteArray())
+                        outputStream.write(COMMENT_START.toByteArray())
+                        outputStream.write(VERSION_TAG.toByteArray())
+                        var manufacturer: String = Build.MANUFACTURER
+                        var model: String = Build.MODEL
+                        var fileVersion: String = "${BuildConfig.VERSION_CODE}" + " Platform: " +
+                                "${Build.VERSION.RELEASE}" + " " + "Manufacturer: "+
+                                "${manufacturer}" + " " + "Model: " + "${model}"
+
+                        outputStream.write(fileVersion.toByteArray())
+                        outputStream.write("\n".toByteArray())
+                        outputStream.write(COMMENT_START.toByteArray())
+                        outputStream.write("\n".toByteArray())
+
+                        // Write JSON data as CSV with a tag
+                        outputStream.write("$jsonTag\n".toByteArray())
+                        outputStream.write(jsonData.toString().toByteArray())
+
+                        AppActivityHandler.getFilePaths().forEach { file ->
+
+                            val reader = BufferedReader(FileReader(file))
+
+                            outputStream.write("\n".toByteArray())
+                            outputStream.write(COMMENT_START.toByteArray())
+                            outputStream.write("${file.name}\n".toByteArray())
+
+                            var line: String? = reader.readLine()
+                            while (line != null) {
+                                outputStream.write("$line\n".toByteArray())
+                                line = reader.readLine()
+                            }
+                            reader.close()
+                        }
+                        outputStream.flush()
+
+                        val cursor = contentResolver.query(mediaUri, null, null, null, null)
+                        cursor?.use { c ->
+                            if (c.moveToFirst()) {
+                                path = c.getString(c.getColumnIndex(MediaStore.Images.Media.DATA))
+                                // Use the file path as needed
+                                Log.d("File path", path)
+                            }
+                        }
+                    }
+                }
+                sendCsvFileToPhone(File(path), connectedNode, this)
+            }
+        }
+    }
+    private fun getWatchNodeId(callback: (ArrayList<String>) -> Unit) {
+        val nodeIds = ArrayList<String>()
+        Wearable.getNodeClient(this).connectedNodes.addOnSuccessListener { nodes ->
+            for (node in nodes) {
+                Log.d(TAG, "connected node in getWatchId " + node.id)
+                nodeIds.add(node.id)
+            }
+            callback(nodeIds)
+        }
+    }
+    private fun fileSendSuccessful(){
+        if (fileSendOk != true){
+            fileSendOk = true
+        }
+        Toast.makeText(this, "succeed", Toast.LENGTH_SHORT).show()
+    }
+    private fun fileSendTerminated(){
+        if (fileSendOk != false){
+            fileSendOk = false
+        }
+        Toast.makeText(this, "failed", Toast.LENGTH_SHORT).show()
+    }
+    private fun sendCsvFileToPhone(csvFile: File, nodeId: String, context: Context) {
+        Log.d(TAG, "in sendCsvFileToPhone " + csvFile.name)
+        // Checks if the file is found and read
+        try {
+            val bufferedReader = BufferedReader(FileReader(csvFile))
+            var line: String? = bufferedReader.readLine()
+            while (line != null) {
+                Log.d(TAG, line.toString())
+                line = bufferedReader.readLine()
+            }
+            bufferedReader.close()
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
+        // Getting channelClient for sending the file
+        val channelClient = Wearable.getChannelClient(context)
+        val callback = object : ChannelClient.ChannelCallback() {
+            override fun onChannelOpened(channel: ChannelClient.Channel) {
+                Log.d(TAG, "onChannelOpened " + channel.nodeId)
+                // Send the CSV file to the phone
+                channelClient.sendFile(channel, csvFile.toUri()).addOnCompleteListener { task ->
+                    if (task.isSuccessful) {
+                        AppActivityHandler.fileSendStatus(true)
+                        fileSendSuccessful()
+                        channelClient.close(channel)
+                    } else {
+                        Log.e(TAG, "Error with file sending " + task.exception.toString())
+                        AppActivityHandler.fileSendStatus(false)
+                        fileSendTerminated()
+                        channelClient.close(channel)
+                    }
+                }
+            }
+
+            override fun onChannelClosed(
+                channel: ChannelClient.Channel,
+                closeReason: Int,
+                appSpecificErrorCode: Int
+            ) {
+                Log.d(
+                    TAG,
+                    "Channel closed: nodeId=$nodeId, reason=$closeReason, errorCode=$appSpecificErrorCode"
+                )
+                Wearable.getChannelClient(applicationContext).close(channel)
+            }
+        }
+
+        channelClient.registerChannelCallback(callback)
+        channelClient.openChannel(
+            nodeId,
+            CSV_FILE_CHANNEL_PATH.toString()
+        ).addOnCompleteListener { result ->
+            Log.d(TAG, result.toString())
+            if (result.isSuccessful) {
+                Log.d(TAG, "Channel opened: nodeId=$nodeId, path=$CSV_FILE_CHANNEL_PATH")
+                callback.onChannelOpened(result.result )
+            } else {
+                Log.e(
+                    TAG,
+                    "Failed to open channel: nodeId=$nodeId, path=$CSV_FILE_CHANNEL_PATH"
+                )
+                channelClient.unregisterChannelCallback(callback)
+            }
+        }
+    }
 
     // ---------------------------------------------------------------------------------------------
 

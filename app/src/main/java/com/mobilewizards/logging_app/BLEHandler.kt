@@ -4,6 +4,9 @@ import android.annotation.SuppressLint
 import android.app.Activity
 import android.bluetooth.*
 import android.bluetooth.le.BluetoothLeScanner
+import android.bluetooth.BluetoothAdapter
+import android.bluetooth.BluetoothServerSocket
+import android.bluetooth.BluetoothSocket
 import android.bluetooth.le.ScanCallback
 import android.bluetooth.le.ScanFilter
 import android.bluetooth.le.ScanResult
@@ -18,9 +21,16 @@ import android.provider.MediaStore
 import android.util.Log
 import android.view.View
 import androidx.core.content.ContextCompat
+import androidx.core.net.toUri
+import com.google.android.gms.wearable.ChannelClient
+import com.google.android.gms.wearable.Wearable
 import com.google.android.material.snackbar.Snackbar
+import java.io.BufferedReader
+import java.io.File
+import java.io.FileReader
 import java.io.IOException
 import java.util.UUID
+
 
 private var startTime: Long? = null
 
@@ -118,6 +128,8 @@ class BLEHandler(private val context: Context) {
             Log.d("Error", e.message.toString())
         }
     }
+
+
 
     @SuppressLint("MissingPermission")
     fun connectPairedDevice(deviceAddress: String){

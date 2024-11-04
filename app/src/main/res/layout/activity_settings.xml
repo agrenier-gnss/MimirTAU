@@ -104,14 +104,25 @@
                 app:layout_constraintStart_toEndOf="@+id/settings"
                 app:layout_constraintTop_toTopOf="@+id/settings" />
             <Button
-                android:id="@+id/button_scan"
-                android:layout_width="0dp"
+                android:id="@+id/button_control"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:text="Control"
+                app:layout_constraintTop_toBottomOf="@+id/button_save"
+                app:layout_constraintStart_toStartOf="@+id/button_save"
+                app:layout_constraintEnd_toEndOf="@+id/button_save"
                 android:layout_marginTop="5dp"
-                android:text="ShowPairedDevices"
+                android:layout_marginEnd="16dp" />
+            <Button
+                android:id="@+id/button_scan"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Devices"
                 app:layout_constraintTop_toBottomOf="@+id/button_default"
+                app:layout_constraintStart_toStartOf="@+id/button_default"
                 app:layout_constraintEnd_toEndOf="@+id/button_default"
-                app:layout_constraintWidth_default="wrap" />
+                android:layout_marginTop="5dp"
+                />
 
 
 
