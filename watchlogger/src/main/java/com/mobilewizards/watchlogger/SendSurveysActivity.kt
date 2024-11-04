@@ -83,7 +83,6 @@ class SendSurveysActivity: Activity() {
                 if (nodeId.isNullOrEmpty()) {
                     // No connection
                     Toast.makeText(this, "Phone not connected", Toast.LENGTH_SHORT).show()
-
                 } else {
                     // there is a phone connection
                     fileSendConfirmationPopup(fileItem)

@@ -243,7 +243,6 @@ class MainActivity : AppCompatActivity() {
         // Register broadcoaster
         registerReceiver(sensorCheckReceiver, IntentFilter("SENSOR_CHECK_UPDATE"), RECEIVER_NOT_EXPORTED)
     }
-
     private fun loadMutableList(key:String): MutableList<String> {
         val jsonString = sharedPreferences.getString(key, "")
         val type: Type = object : TypeToken<MutableList<Any>>() {}.type
@@ -426,7 +425,8 @@ class MainActivity : AppCompatActivity() {
                         }
                     }
                 } else {
-                    Log.w("verifyChecksum", "File transfer is still in progress; checksum verification skipped.")
+                    Log.w("verifyChecksum", "File transfer is still in progress; " +
+                            "checksum verification skipped.")
                 }
             }
         }
@@ -455,7 +455,8 @@ class MainActivity : AppCompatActivity() {
 
                     val currentSizeMB = currentSize / (1024 * 1024)
                     val totalSizeMB = file.length() / (1024 * 1024)
-                    //TODO: capture the file total size from watch or just dont use totalsize
+                    //TODO: capture the file total size from watch or just dont use totalsize.
+                    // for better UX, it should show size changing as progress at least
 
                     snackbar.setText("Receiving file... Size: ${currentSizeMB} MB / ${totalSizeMB} MB")
                         .setAction("Cancel", null).show()
@@ -482,7 +483,6 @@ class MainActivity : AppCompatActivity() {
         return hashBytes.joinToString("") { "%02x".format(it) }
     }
 }
-
 // =================================================================================================
 
 // Class for showing a notification whenever file transfer from smartwatch is detected. A separate
