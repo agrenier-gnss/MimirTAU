@@ -403,7 +403,6 @@ class MainActivity : AppCompatActivity() {
             waitForFileTransfer(file, snackbar) { isTransferComplete ->
 
                 if (isTransferComplete) {
-                    synchronized(fileAccessLock) {
                         try {
                             val fileBytes = file.readBytes()
                             val fileChecksum = generateChecksum(fileBytes)
@@ -423,7 +422,6 @@ class MainActivity : AppCompatActivity() {
                             GlobalNotification().showAlertDialog(context, "Error",
                                 "An error occurred while verifying the file.")
                         }
-                    }
                 } else {
                     Log.w("verifyChecksum", "File transfer is still in progress; " +
                             "checksum verification skipped.")
