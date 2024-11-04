@@ -93,7 +93,7 @@ class MainActivity : AppCompatActivity() {
 
     private val checksumReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
-            if (intent.action == "com.example.ACTION_VERIFY_CHECKSUM") {
+            if (intent.action == "ACTION_VERIFY_CHECKSUM") {
                 val receivedChecksum = intent.getStringExtra("checksum")
                 if (receivedChecksum != null) {
                     verifyChecksum(context, file, receivedChecksum)
@@ -143,7 +143,8 @@ class MainActivity : AppCompatActivity() {
         supportActionBar?.hide()
 
         // Register the receiver to listen for checksum broadcasts
-        registerReceiver(checksumReceiver, IntentFilter("com.example.ACTION_VERIFY_CHECKSUM"))
+        registerReceiver(checksumReceiver, IntentFilter("ACTION_VERIFY_CHECKSUM"),
+            RECEIVER_NOT_EXPORTED)
         // Create communication with the watch
         val channelClient = Wearable.getChannelClient(applicationContext)
         channelClient.registerChannelCallback(object : ChannelClient.ChannelCallback() {
@@ -467,14 +468,6 @@ class MainActivity : AppCompatActivity() {
         }
 
         handler.post(checkRunnable)
-
-        // Timeout check (optional)
-        handler.postDelayed({
-            if (unchangedSizeCount < 3) {
-                callback(false)
-            }
-            snackbar.dismiss()
-        }, 10000)
     }
 
     private fun generateChecksum(data: ByteArray): String {
@@ -549,7 +542,7 @@ class ChecksumListenerService : WearableListenerService() {
             Log.d("verifyChecksum", "Received checksum: $checksum")
 
             // Broadcast the checksum to MainActivity
-            val intent = Intent("com.example.ACTION_VERIFY_CHECKSUM")
+            val intent = Intent("ACTION_VERIFY_CHECKSUM")
             intent.putExtra("checksum", checksum)
             sendBroadcast(intent)
         } else {
