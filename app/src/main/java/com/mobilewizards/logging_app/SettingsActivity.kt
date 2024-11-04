@@ -73,22 +73,7 @@ class SettingsActivity : AppCompatActivity() {
             editor.apply()
         }
         checkAndRequestBluetoothPermissions()
-        val channelClient = Wearable.getChannelClient(applicationContext)
-        channelClient.registerChannelCallback(object : ChannelClient.ChannelCallback() {
-            override fun onChannelOpened(channel: ChannelClient.Channel) {
 
-                val receiveTask = channelClient.receiveFile(channel, ("file:///storage/emulated/0/Download/log_watch_received_${
-                    LocalDateTime.now().format(
-                        DateTimeFormatter.ofPattern("yyyyMMdd_HHmmssSSS"))}.csv").toUri(), false)
-                receiveTask.addOnCompleteListener { task ->
-                    if (task.isSuccessful) {
-                        Log.d("channel", "File successfully stored")
-                    } else {
-                        Log.e("channel", "File receival/saving failed: ${task.exception}")
-                    }
-                }
-            }
-        })
         AppActivityHandler.getFilePaths().forEach{ path ->
             filePaths.add(path)
         }
@@ -235,11 +220,27 @@ class SettingsActivity : AppCompatActivity() {
                 sensorsComponents.forEach { entry ->
                     val mkey : SensorType = SensorType.TYPE_GNSS
                     when(entry.key){
-                        "GNSS" -> jsonData.put("GNSS",SensorType.TYPE_GNSS)
-                        "IMU"  -> jsonData.put("IMU",SensorType.TYPE_IMU)
-                        "PSR"  -> jsonData.put("PSR",SensorType.TYPE_PRESSURE)
-                        "STEPS"-> jsonData.put("STEPS",SensorType.TYPE_STEPS)
+                        "GNSS" -> jsonData.put("GNSS",JSONObject().apply {
+                            put("switch", entry.value[IDX_SWITCH])
+                        })
+                        "IMU"  -> jsonData.put("IMU",JSONObject().apply {
+                            put("switch", entry.value[IDX_SWITCH])
+                            put("value",entry.value[IDX_SEEKBAR])
+                        })
+                        "PSR"  -> jsonData.put("PSR",JSONObject().apply {
+                            put("switch", entry.value[IDX_SWITCH])
+                            put("value",entry.value[IDX_SEEKBAR])
+                        })
+                        "STEPS"-> jsonData.put("STEPS",JSONObject().apply {
+                            put("switch", entry.value[IDX_SWITCH])
+                            put("value",entry.value[IDX_SEEKBAR])
+                        })
                     }
+
+                    // Added health sensor for LoggingService
+                    ActivityHandler.sensorsSelected[SensorType.TYPE_SPECIFIC_ECG] = Pair(false, 0)
+                    ActivityHandler.sensorsSelected[SensorType.TYPE_SPECIFIC_PPG] = Pair(false, 0)
+                    ActivityHandler.sensorsSelected[SensorType.TYPE_SPECIFIC_GSR] = Pair(false, 0)
                 }
                  // Tag for JSON data
                 val jsonTag = "JSON_DATA_START"
@@ -329,18 +330,7 @@ class SettingsActivity : AppCompatActivity() {
     }
     private fun sendCsvFileToPhone(csvFile: File, nodeId: String, context: Context) {
         Log.d(TAG, "in sendCsvFileToPhone " + csvFile.name)
-        // Checks if the file is found and read
-        try {
-            val bufferedReader = BufferedReader(FileReader(csvFile))
-            var line: String? = bufferedReader.readLine()
-            while (line != null) {
-                Log.d(TAG, line.toString())
-                line = bufferedReader.readLine()
-            }
-            bufferedReader.close()
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
+
 
         // Getting channelClient for sending the file
         val channelClient = Wearable.getChannelClient(context)

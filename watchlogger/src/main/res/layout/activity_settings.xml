@@ -11,8 +11,8 @@
     tools:deviceIds="wear">
 
     <ScrollView
-            android:layout_width="match_parent"
-            android:layout_height="match_parent">
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
 
         <LinearLayout
             android:id="@+id/activity_settings_layout"
@@ -64,7 +64,6 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/str_gnss_rate" />
-
 
 
             <View
@@ -243,7 +242,7 @@
                 android:layout_width="130dp"
                 android:layout_height="wrap_content"
                 android:text="@string/str_gsr"
-                android:textColor="@color/fontWhite"/>
+                android:textColor="@color/fontWhite" />
 
             <TextView
                 android:id="@+id/settings_tv_gsr"
@@ -289,9 +288,25 @@
                     android:text="@string/str_default"
                     android:textAlignment="center"
                     android:textSize="12sp" />
+
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="160dp"
+                android:layout_height="match_parent"
+                android:orientation="horizontal">
+
+                <Button
+                    android:id="@+id/button_send"
+                    android:layout_width="0dp"
+                    android:layout_height="60dp"
+                    android:layout_weight="1"
+                    android:text="Remember to delete files"
+                    android:textAlignment="center"
+                    android:textSize="12sp" />
             </LinearLayout>
         </LinearLayout>
-        </ScrollView>
+    </ScrollView>
 
 
 </androidx.wear.widget.BoxInsetLayout>

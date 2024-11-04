@@ -16,9 +16,18 @@ import com.mimir.sensors.SensorType
 import com.mobilewizards.watchlogger.WatchActivityHandler
 import com.mobilewizards.logging_app.databinding.ActivitySettingsBinding
 import android.widget.Toast
+import androidx.core.net.toUri
+import com.google.android.gms.wearable.ChannelClient
+import com.google.android.gms.wearable.Wearable
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import org.json.JSONObject
+import java.io.BufferedReader
+import java.io.File
+import java.io.FileReader
 import java.lang.reflect.Type
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 
 const val IDX_SWITCH   = 0
 const val IDX_SEEKBAR  = 1
@@ -191,10 +200,97 @@ class SettingsActivity : Activity() {
         btnDefault.setOnClickListener {
             saveDefaultSettings()
         }
+
+        val channelClient = Wearable.getChannelClient(applicationContext)
+        channelClient.registerChannelCallback(object : ChannelClient.ChannelCallback() {
+            override fun onChannelOpened(channel: ChannelClient.Channel) {
+                val filePath = "file:///storage/emulated/0/Download/setting_app_received_${
+                    LocalDateTime.now().format(
+                        DateTimeFormatter.ofPattern("yyyyMMdd_HHmmssSSS"))}.csv"
+                val receiveTask = channelClient.receiveFile(channel, filePath.toUri(), false)
+                receiveTask.addOnCompleteListener { task ->
+                    if (task.isSuccessful) {
+                        Log.d("channel", "File successfully stored")
+                        Toast.makeText(applicationContext, "succeed", Toast.LENGTH_SHORT).show()
+                        extractJsonDataFromCsv(filePath)
+
+                    } else {
+                        Log.e("channel", "File receival/saving failed: ${task.exception}")
+                    }
+                }
+            }
+        })
+    }
+
+    fun reflectJsonDataToWatch(jsonData:JSONObject) {
+        val keys = jsonData.keys();
+        while (keys.hasNext()) {
+            val key: String = keys.next()
+            when (key) {
+                "GNSS" -> sensorsComponents[SensorType.TYPE_GNSS]?.let {
+                    (it[0] as Switch).isChecked = jsonData.getJSONObject(key).getInt("switch") == 1
+                }
+
+                "IMU" -> sensorsComponents[SensorType.TYPE_IMU]?.let {
+                    val processValue = jsonData.getJSONObject(key).getInt("value")
+                    (it[0] as Switch).isChecked = jsonData.getJSONObject(key).getInt("switch") == 1
+                    (it[1] as SeekBar).isEnabled = jsonData.getJSONObject(key).getInt("switch") == 1
+                    (it[1] as SeekBar).progress = processValue
+                    (it[2] as TextView).text = "IMU frequency: $processValue Hz"
+                }
+
+                "PSR" -> sensorsComponents[SensorType.TYPE_PRESSURE]?.let {
+                    val processValue = jsonData.getJSONObject(key).getInt("value")
+                    (it[0] as Switch).isChecked = jsonData.getJSONObject(key).getInt("switch") == 1
+                    (it[1] as SeekBar).isEnabled = jsonData.getJSONObject(key).getInt("switch") == 1
+                    (it[1] as SeekBar).progress = processValue
+                    (it[2] as TextView).text = "Pressure frequency: $processValue Hz"
+                }
+
+                "STEPS" -> sensorsComponents[SensorType.TYPE_STEPS]?.let {
+                    val processValue = jsonData.getJSONObject(key).getInt("value")
+                    (it[0] as Switch).isChecked = jsonData.getJSONObject(key).getInt("switch") == 1
+                    (it[1] as SeekBar).isEnabled = jsonData.getJSONObject(key).getInt("switch") == 1
+                    (it[1] as SeekBar).progress = processValue
+                    (it[2] as TextView).text = "PTYPE STEPS: $processValue Hz"
+                }
+            }
+
+        }
+
+    }
+    fun extractJsonDataFromCsv(filePath: String) {
+        val jsonTag = "JSON_DATA_START"
+        val file = File(filePath)
+        var jsonData: JSONObject? = null
+
+        if (file.exists()) {
+            BufferedReader(FileReader(file)).use { reader ->
+                var line: String?
+                var isJsonData = false
+                val jsonStringBuilder = StringBuilder()
+
+                while (reader.readLine().also { line = it } != null) {
+                    if (line == jsonTag) {
+                        isJsonData = true
+                        continue
+                    }
+                    if (isJsonData) {
+                        jsonStringBuilder.append(line)
+                    }
+                }
+
+                if (jsonStringBuilder.isNotEmpty()) {
+                    jsonData = JSONObject(jsonStringBuilder.toString())
+                }
+            }
+        }
+
+        jsonData?.let { reflectJsonDataToWatch(it) }
     }
 
     // ---------------------------------------------------------------------------------------------
-    private fun loadMutableList(key:String): MutableList<String> {
+    fun loadMutableList(key:String): MutableList<String> {
         val jsonString = sharedPreferences.getString(key, "")
         val type: Type = object : TypeToken<MutableList<Any>>() {}.type
 
