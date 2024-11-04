@@ -1,6 +1,9 @@
 package com.mobilewizards.logging_app
 
 import android.Manifest
+import android.app.Activity
+import android.app.Application
+import com.google.android.material.snackbar.Snackbar
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -9,25 +12,33 @@ import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import android.os.Environment
 import android.os.Handler
+import android.os.Looper
 import android.os.SystemClock
+import android.provider.MediaStore
 import android.util.Log
 import android.view.View
 import android.widget.Button
 import android.widget.TextView
+import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
 import com.google.android.gms.wearable.ChannelClient
+import com.google.android.gms.wearable.MessageEvent
 import com.google.android.gms.wearable.Wearable
+import com.google.android.gms.wearable.WearableListenerService
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import com.mimir.sensors.LoggingService
 import com.mimir.sensors.SensorType
+import java.io.File
 import java.io.Serializable
 import java.lang.reflect.Type
+import java.security.MessageDigest
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
@@ -43,12 +54,15 @@ class MainActivity : AppCompatActivity() {
     private lateinit var settingsBtn: Button
     private lateinit var dataButton: Button
     private lateinit var loggingText: TextView
+    private lateinit var file: File
 
     lateinit var loggingIntent : Intent
 
     private lateinit var sharedPreferences: SharedPreferences
 
     private var sensorTextViewList = mutableMapOf<SensorType, TextView>()
+
+    private val fileAccessLock = Object()
 
     // ---------------------------------------------------------------------------------------------
 
@@ -77,11 +91,20 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private val checksumReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            if (intent.action == "com.example.ACTION_VERIFY_CHECKSUM") {
+                val receivedChecksum = intent.getStringExtra("checksum")
+                if (receivedChecksum != null) {
+                    verifyChecksum(context, file, receivedChecksum)
+                }
+            }
+        }
+    }
     // ---------------------------------------------------------------------------------------------
 
     override fun onResume() {
         super.onResume()
-
         timeText = findViewById(R.id.logging_time_text_view)
 
         // Prevent logging button from going to unintended locations
@@ -119,17 +142,22 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
         supportActionBar?.hide()
 
+        // Register the receiver to listen for checksum broadcasts
+        registerReceiver(checksumReceiver, IntentFilter("com.example.ACTION_VERIFY_CHECKSUM"))
         // Create communication with the watch
         val channelClient = Wearable.getChannelClient(applicationContext)
         channelClient.registerChannelCallback(object : ChannelClient.ChannelCallback() {
             override fun onChannelOpened(channel: ChannelClient.Channel) {
+                val fileName = "log_watch_received_${
+                    LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmssSSS"))}.csv"
+                file = File(applicationContext.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS), fileName)
 
-                val receiveTask = channelClient.receiveFile(channel, ("file:///storage/emulated/0/Download/log_watch_received_${
-                    LocalDateTime.now().format(
-                        DateTimeFormatter.ofPattern("yyyyMMdd_HHmmssSSS"))}.csv").toUri(), false)
+                val receiveTask = channelClient.receiveFile(channel, file.toUri(), false)
                 receiveTask.addOnCompleteListener { task ->
+
                     if (task.isSuccessful) {
                         Log.d("channel", "File successfully stored")
+                        (applicationContext as? GlobalNotification)?.showFileReceivedDialog(file.toString())
                     } else {
                         Log.e("channel", "File receival/saving failed: ${task.exception}")
                     }
@@ -215,7 +243,6 @@ class MainActivity : AppCompatActivity() {
         // Register broadcoaster
         registerReceiver(sensorCheckReceiver, IntentFilter("SENSOR_CHECK_UPDATE"), RECEIVER_NOT_EXPORTED)
     }
-
     private fun loadMutableList(key:String): MutableList<String> {
         val jsonString = sharedPreferences.getString(key, "")
         val type: Type = object : TypeToken<MutableList<Any>>() {}.type
@@ -363,8 +390,171 @@ class MainActivity : AppCompatActivity() {
         // Remove the updateRunnable when the activity is destroyed to prevent memory leaks
         unregisterReceiver(sensorCheckReceiver)
         durationHandler.removeCallbacks(updateRunnableDuration)
+        unregisterReceiver(checksumReceiver)
         super.onDestroy()
+    }
+
+    private fun verifyChecksum(context: Context, file: File, expectedChecksum: String) {
+        synchronized(fileAccessLock) {
+            val rootView = (context as Activity).findViewById<View>(android.R.id.content)
+            val snackbar = Snackbar.make(rootView, "Receiving file... Size: 0 KB", Snackbar.LENGTH_INDEFINITE)
+            snackbar.show()
+
+            waitForFileTransfer(file, snackbar) { isTransferComplete ->
+
+                if (isTransferComplete) {
+                    synchronized(fileAccessLock) {
+                        try {
+                            val fileBytes = file.readBytes()
+                            val fileChecksum = generateChecksum(fileBytes)
+
+                            Log.d("ChecksumListener", "Received log checksum: $fileChecksum")
+
+                            if (fileChecksum == expectedChecksum) {
+                                Log.d("verifyChecksum", "Checksum verification successful. File is intact.")
+                                Toast.makeText(context, "File integrity verified.", Toast.LENGTH_SHORT).show()
+                            } else {
+                                Log.e("verifyChecksum", "Checksum mismatch. File may be corrupted.")
+                                GlobalNotification().showAlertDialog(context, "File Corruption Detected",
+                                    "The file appears to be corrupted during transfer.")
+                            }
+                        } catch (e: Exception) {
+                            Log.e("verifyChecksum", "Error verifying checksum: ${e.message}")
+                            GlobalNotification().showAlertDialog(context, "Error",
+                                "An error occurred while verifying the file.")
+                        }
+                    }
+                } else {
+                    Log.w("verifyChecksum", "File transfer is still in progress; " +
+                            "checksum verification skipped.")
+                }
+            }
+        }
+    }
+
+    private fun waitForFileTransfer(file: File, snackbar: Snackbar, callback: (Boolean) -> Unit) {
+        val handler = Handler(Looper.getMainLooper())
+        var lastSize = file.length()
+        var unchangedSizeCount = 0
+
+        val checkRunnable = object : Runnable {
+            override fun run() {
+                val currentSize = file.length()
+                if (currentSize == lastSize) {
+                    unchangedSizeCount++
+                    // Confirm the file size hasn't changed for 3 consecutive checks before completing
+                    if (unchangedSizeCount >= 3) {
+                        snackbar.dismiss()
+                        callback(true)
+                    } else {
+                        handler.postDelayed(this, 500)
+                    }
+                } else {
+                    lastSize = currentSize
+                    unchangedSizeCount = 0
+
+                    val currentSizeMB = currentSize / (1024 * 1024)
+                    val totalSizeMB = file.length() / (1024 * 1024)
+                    //TODO: capture the file total size from watch or just dont use totalsize.
+                    // for better UX, it should show size changing as progress at least
+
+                    snackbar.setText("Receiving file... Size: ${currentSizeMB} MB / ${totalSizeMB} MB")
+                        .setAction("Cancel", null).show()
+
+                    handler.postDelayed(this, 500)
+                }
+            }
+        }
+
+        handler.post(checkRunnable)
+
+        // Timeout check (optional)
+        handler.postDelayed({
+            if (unchangedSizeCount < 3) {
+                callback(false)
+            }
+            snackbar.dismiss()
+        }, 10000)
+    }
+
+    private fun generateChecksum(data: ByteArray): String {
+        val digest = MessageDigest.getInstance("SHA-256")
+        val hashBytes = digest.digest(data)
+        return hashBytes.joinToString("") { "%02x".format(it) }
+    }
+}
+// =================================================================================================
+
+// Class for showing a notification whenever file transfer from smartwatch is detected. A separate
+// class as Application() is needed in order make notification to appear on all activities.
+class GlobalNotification : Application() {
+    private var currentActivity: AppCompatActivity? = null
+
+    override fun onCreate() {
+        super.onCreate()
+
+        // Register activity lifecycle callbacks to keep track of the current activity
+        registerActivityLifecycleCallbacks(object : ActivityLifecycleCallbacks {
+            override fun onActivityResumed(activity: Activity) {
+                if (activity is AppCompatActivity) {
+                    currentActivity = activity
+                }
+            }
+
+            override fun onActivityPaused(activity: Activity) {
+                if (activity == currentActivity) {
+                    currentActivity = null
+                }
+            }
+
+            // Other lifecycle callback methods are left empty
+            override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {}
+            override fun onActivityStarted(activity: Activity) {}
+            override fun onActivityStopped(activity: Activity) {}
+            override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle) {}
+            override fun onActivityDestroyed(activity: Activity) {}
+        })
+    }
+
+    fun showFileReceivedDialog(filePath: String) {
+        currentActivity?.let {
+            android.app.AlertDialog.Builder(it)
+                .setTitle("File Received")
+                .setMessage("The file has been saved at: $filePath")
+                .setPositiveButton("OK") { dialog, _ -> dialog.dismiss() }
+                .create()
+                .show()
+        }
+    }
+    fun showAlertDialog(context: Context, title: String, message: String) {
+        AlertDialog.Builder(context).apply {
+            setTitle(title)
+            setMessage(message)
+            setPositiveButton("OK") { dialog, _ -> dialog.dismiss() }
+            create()
+            show()
+        }
     }
 }
 
-// =================================================================================================
+class ChecksumListenerService : WearableListenerService() {
+
+    private val CSV_FILE_CHANNEL_PATH = MediaStore.Downloads.EXTERNAL_CONTENT_URI
+
+    override fun onMessageReceived(messageEvent: MessageEvent) {
+        // Check if the message path matches the one used for sending the checksum
+        if (messageEvent.path == CSV_FILE_CHANNEL_PATH.toString()) {
+            // Convert the byte array back to a String
+            val checksum = String(messageEvent.data)
+            Log.d("verifyChecksum", "Received checksum: $checksum")
+
+            // Broadcast the checksum to MainActivity
+            val intent = Intent("com.example.ACTION_VERIFY_CHECKSUM")
+            intent.putExtra("checksum", checksum)
+            sendBroadcast(intent)
+        } else {
+            super.onMessageReceived(messageEvent)
+        }
+    }
+
+}

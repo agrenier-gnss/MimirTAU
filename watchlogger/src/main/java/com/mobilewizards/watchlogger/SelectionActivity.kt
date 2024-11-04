@@ -5,7 +5,6 @@ import android.app.Activity
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
-import android.view.View
 import android.widget.Button
 import androidx.core.app.ActivityCompat
 import com.mobilewizards.logging_app.databinding.ActivitySelectionBinding
@@ -41,6 +40,8 @@ class SelectionActivity: Activity() {
             val openSendSurveys = Intent(this, SendSurveysActivity::class.java)
             startActivity(openSendSurveys)
         }
+
+
     }
 
     // =============================================================================================

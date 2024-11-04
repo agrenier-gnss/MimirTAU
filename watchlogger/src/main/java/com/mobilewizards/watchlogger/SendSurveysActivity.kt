@@ -33,6 +33,7 @@ import android.view.ViewGroup
 import android.widget.TextView
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import java.security.MessageDigest
 
 
 private const val COMMENT_START = "#"
@@ -82,7 +83,6 @@ class SendSurveysActivity: Activity() {
                 if (nodeId.isNullOrEmpty()) {
                     // No connection
                     Toast.makeText(this, "Phone not connected", Toast.LENGTH_SHORT).show()
-
                 } else {
                     // there is a phone connection
                     fileSendConfirmationPopup(fileItem)
@@ -212,6 +212,7 @@ class SendSurveysActivity: Activity() {
         WatchActivityHandler.fileSendStatus(fileSendOk)
         val openSendInfo = Intent(applicationContext, FileSendActivity::class.java)
         startActivity(openSendInfo)
+        finish()
     }
 
     // =============================================================================================
@@ -221,6 +222,7 @@ class SendSurveysActivity: Activity() {
         WatchActivityHandler.fileSendStatus(fileSendOk)
         val openSendInfo = Intent(applicationContext, FileSendActivity::class.java)
         startActivity(openSendInfo)
+        finish()
     }
 
     // =============================================================================================
@@ -338,10 +340,25 @@ class SendSurveysActivity: Activity() {
     // =============================================================================================
 
     private fun getPhoneNodeId(callback: (String?) -> Unit) {
-        Wearable.getNodeClient(this).connectedNodes.addOnSuccessListener { nodes ->
-            callback(nodes.firstOrNull()?.id)
+        val nodeClient = Wearable.getNodeClient(applicationContext)
+        nodeClient.connectedNodes.addOnSuccessListener { nodes ->
+            // Filter for nearby nodes only
+            val nearbyNode = nodes.firstOrNull { it.isNearby }
+
+            // Pass the ID of the first nearby node (or null if none are nearby)
+            callback(nearbyNode?.id)
+
+            if (nearbyNode == null) {
+                Log.e("pairing", "No nearby paired device found.")
+            } else {
+                Log.d("pairing", "Nearby device is paired and connected.")
+            }
+        }.addOnFailureListener { exception ->
+            Log.e("pairing", "Failed to get connected nodes: ${exception.message}")
+            callback(null)
         }
     }
+
 
     // =============================================================================================
 
@@ -359,6 +376,11 @@ class SendSurveysActivity: Activity() {
             e.printStackTrace()
         }
 
+        // Generate the checksum for the file
+        val fileData = csvFile.readBytes()
+        val checksum = generateChecksum(fileData)
+        Log.d(TAG, "File checksum: $checksum")
+
         // Getting channelClient for sending the file
         val channelClient = Wearable.getChannelClient(context)
         val callback = object: ChannelClient.ChannelCallback() {
@@ -368,6 +390,7 @@ class SendSurveysActivity: Activity() {
                 channelClient.sendFile(channel, csvFile.toUri()).addOnCompleteListener { task ->
                     if (task.isSuccessful) {
                         WatchActivityHandler.fileSendStatus(true)
+                        sendChecksumToPhone(checksum, nodeId, context)
                         fileSendSuccessful()
                         channelClient.close(channel)
                     } else {
@@ -405,8 +428,30 @@ class SendSurveysActivity: Activity() {
             }
         }
     }
-}
 
+    // =============================================================================================
+
+    // generate a SHA-256 checksum for data corruption check between smartphone and watch file
+    // transfer
+    private fun generateChecksum(data: ByteArray): String {
+        val digest = MessageDigest.getInstance("SHA-256")
+        val hashBytes = digest.digest(data)
+        return hashBytes.joinToString("") { "%02x".format(it) }
+    }
+
+    private fun sendChecksumToPhone(checksum: String, nodeId: String, context: Context) {
+        val messageClient = Wearable.getMessageClient(context)
+        val checksumPath = "$CSV_FILE_CHANNEL_PATH"
+
+        messageClient.sendMessage(nodeId, checksumPath, checksum.toByteArray()).addOnCompleteListener { task ->
+            if (task.isSuccessful) {
+                Log.d("verifyChecksum", "Checksum sent successfully. Value: $checksum")
+            } else {
+                Log.e(TAG, "Error sending checksum: ${task.exception}")
+            }
+        }
+    }
+}
 
 // Separate class for RecyclerView items in RecyclerView activity_send_surveys.xml
 class FilesAdapter(

@@ -42,6 +42,10 @@ class FileSendActivity: Activity() {
         Handler(Looper.getMainLooper()).postDelayed({
             val intent = Intent(this, SendSurveysActivity::class.java)
             startActivity(intent)
+            finish()
         }, 4000)
+    }
+    override fun onBackPressed() {
+        // Override the back button press to do nothing
     }
 }
