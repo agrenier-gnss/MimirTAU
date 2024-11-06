@@ -5,6 +5,7 @@ import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Context
 import android.content.SharedPreferences
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.widget.Button
@@ -16,6 +17,7 @@ import com.mimir.sensors.SensorType
 import com.mobilewizards.watchlogger.WatchActivityHandler
 import com.mobilewizards.logging_app.databinding.ActivitySettingsBinding
 import android.widget.Toast
+import androidx.annotation.RequiresApi
 import androidx.core.net.toUri
 import com.google.android.gms.wearable.ChannelClient
 import com.google.android.gms.wearable.Wearable
@@ -221,6 +223,7 @@ class SettingsActivity : Activity() {
             }
         })
     }
+
 
     fun reflectJsonDataToWatch(jsonData:JSONObject) {
         val keys = jsonData.keys();
