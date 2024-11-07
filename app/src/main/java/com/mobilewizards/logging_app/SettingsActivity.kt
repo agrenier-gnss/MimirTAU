@@ -221,26 +221,26 @@ class SettingsActivity : AppCompatActivity() {
                     val mkey : SensorType = SensorType.TYPE_GNSS
                     when(entry.key){
                         "GNSS" -> jsonData.put("GNSS",JSONObject().apply {
-                            put("switch", entry.value[IDX_SWITCH])
+                            put("switch", (entry.value[IDX_SWITCH] as? SwitchCompat)?.isChecked as Boolean)
                         })
                         "IMU"  -> jsonData.put("IMU",JSONObject().apply {
-                            put("switch", entry.value[IDX_SWITCH])
-                            put("value",entry.value[IDX_SEEKBAR])
+                            put("switch", (entry.value[IDX_SWITCH] as? SwitchCompat)?.isChecked as Boolean)
+                            put("value",progressToFrequency[(entry.value[IDX_SEEKBAR] as? SeekBar)?.progress as Int])
                         })
                         "PSR"  -> jsonData.put("PSR",JSONObject().apply {
-                            put("switch", entry.value[IDX_SWITCH])
-                            put("value",entry.value[IDX_SEEKBAR])
+                            put("switch", (entry.value[IDX_SWITCH] as? SwitchCompat)?.isChecked as Boolean)
+                            put("value",progressToFrequency[(entry.value[IDX_SEEKBAR] as? SeekBar)?.progress as Int])
                         })
                         "STEPS"-> jsonData.put("STEPS",JSONObject().apply {
-                            put("switch", entry.value[IDX_SWITCH])
-                            put("value",entry.value[IDX_SEEKBAR])
+                            put("switch", (entry.value[IDX_SWITCH] as? SwitchCompat)?.isChecked as Boolean)
+                            put("value",progressToFrequency[(entry.value[IDX_SEEKBAR] as? SeekBar)?.progress as Int])
                         })
                     }
-
+/*
                     // Added health sensor for LoggingService
                     ActivityHandler.sensorsSelected[SensorType.TYPE_SPECIFIC_ECG] = Pair(false, 0)
                     ActivityHandler.sensorsSelected[SensorType.TYPE_SPECIFIC_PPG] = Pair(false, 0)
-                    ActivityHandler.sensorsSelected[SensorType.TYPE_SPECIFIC_GSR] = Pair(false, 0)
+                    ActivityHandler.sensorsSelected[SensorType.TYPE_SPECIFIC_GSR] = Pair(false, 0)*/
                 }
                  // Tag for JSON data
                 val jsonTag = "JSON_DATA_START"
