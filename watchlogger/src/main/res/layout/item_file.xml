@@ -24,9 +24,20 @@
         android:id="@+id/fileCreationTimeTextView"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:textSize="12sp"
+        android:textSize="11sp"
         android:textColor="@android:color/black"
         app:layout_constraintTop_toBottomOf="@id/fileNameTextView"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintBottom_toTopOf="@id/fileSizeTextView" />
+
+    <TextView
+        android:id="@+id/fileSizeTextView"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:textSize="11sp"
+        android:textColor="@android:color/black"
+        app:layout_constraintTop_toBottomOf="@id/fileCreationTimeTextView"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintBottom_toTopOf="@id/fileSendButton" />
@@ -42,7 +53,7 @@
         android:scaleType="centerInside"
         android:contentDescription="Button for sending file to phone"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/fileCreationTimeTextView"
+        app:layout_constraintTop_toBottomOf="@id/fileSizeTextView"
         app:layout_constraintEnd_toStartOf="@id/fileDeleteButton"
         app:layout_constraintBottom_toBottomOf="parent" />
 
@@ -55,9 +66,9 @@
         android:padding="3dp"
         android:scaleType="centerInside"
         android:contentDescription="Button for deleting the file from the watch"
-        app:layout_constraintStart_toEndOf="@id/fileSendButton"
-        app:layout_constraintTop_toBottomOf="@id/fileCreationTimeTextView"
         app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/fileSizeTextView"
+        app:layout_constraintStart_toEndOf="@id/fileSendButton"
         app:layout_constraintBottom_toBottomOf="parent" />
 
 
