@@ -468,6 +468,8 @@ class FilesAdapter(
     inner class FileViewHolder(view: View): RecyclerView.ViewHolder(view) {
         val fileNameTextView: TextView = view.findViewById(R.id.fileNameTextView)
         val fileCreationTimeTextView: TextView = view.findViewById(R.id.fileCreationTimeTextView)
+        val fileSizeTextView: TextView = view.findViewById(R.id.fileSizeTextView)
+
 
         // possibly add a "toDriveBtn" for sending survey to drive in the future
         val fileSendButton: ImageButton = view.findViewById(R.id.fileSendButton)
@@ -485,7 +487,7 @@ class FilesAdapter(
         val file = filesList[position]
         holder.fileNameTextView.text = file.nameWithoutExtension
         holder.fileCreationTimeTextView.text = getFileCreationTime(file)
-
+        holder.fileSizeTextView.text = getFormattedFileSize(file)
         holder.fileSendButton.setOnClickListener {
             onFileSendClick!!(file) // should never be null when this is called
         }
@@ -509,6 +511,23 @@ class FilesAdapter(
         } catch (e: Exception) {
             e.printStackTrace()
             null
+        }
+    }
+
+    private fun getFormattedFileSize(file: File): String {
+
+        val sizeInBytes = file.length() // File size in bytes
+
+        val kb = sizeInBytes / 1024.0
+        val mb = kb / 1024.0
+        val gb = mb / 1024.0
+
+        // takes the highest size category over 1
+        return when {
+            gb >= 1 -> String.format("%.1f GB", gb)
+            mb >= 1 -> String.format("%.1f MB", mb)
+            kb >= 1 -> String.format("%.1f KB", kb)
+            else -> "$sizeInBytes Bytes"
         }
     }
 
