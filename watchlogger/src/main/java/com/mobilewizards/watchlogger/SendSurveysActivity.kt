@@ -228,15 +228,14 @@ class SendSurveysActivity: Activity() {
     // =============================================================================================
 
     @SuppressLint("SimpleDateFormat")
-    private fun generateCsvFile(csvFile: File): String {
+    private fun generateCsvFile(file: File): String {
         // generates the csv file and saves it into the watches' downloaded files
 
-        val dateTime = SimpleDateFormat("yyyyMMdd_HHmmssSSS").format(System.currentTimeMillis())
-
-        val fileName = "log_watch_$dateTime.csv"
+        val originalName = file.nameWithoutExtension
+        val newFileName = "${originalName}_sw.csv"
 
         val contentValues = ContentValues().apply {
-            put(MediaStore.Downloads.DISPLAY_NAME, fileName)
+            put(MediaStore.Downloads.DISPLAY_NAME, newFileName)
             put(MediaStore.Downloads.MIME_TYPE, "text/csv")
             put(MediaStore.Downloads.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
         }
@@ -250,18 +249,18 @@ class SendSurveysActivity: Activity() {
                     outputStream.write("$line\n".toByteArray())
                 }
 
-                writeLine("$COMMENT_START $fileName")
+                writeLine("$COMMENT_START $originalName")
                 writeLine(COMMENT_START)
                 writeLine("$COMMENT_START Header Description:")
                 writeLine(COMMENT_START)
                 writeLine("$COMMENT_START Version: ${BuildConfig.VERSION_CODE} Platform: ${Build.VERSION.RELEASE} Manufacturer: ${Build.MANUFACTURER} Model: ${Build.MODEL}")
                 writeLine(COMMENT_START)
 
-                // Read each of the files from csvFile and send them to the output stream
-                val reader = BufferedReader(FileReader(csvFile))
+                // Read each of the files from file and send them to the output stream
+                val reader = BufferedReader(FileReader(file))
 
                 writeLine("")
-                writeLine("$COMMENT_START ${csvFile.name}")
+                writeLine("$COMMENT_START ${file.name}")
 
                 var line: String? = reader.readLine()
                 while (line != null) {
@@ -385,21 +384,28 @@ class SendSurveysActivity: Activity() {
         val channelClient = Wearable.getChannelClient(context)
         val callback = object: ChannelClient.ChannelCallback() {
             override fun onChannelOpened(channel: ChannelClient.Channel) {
+
                 Log.d(TAG, "onChannelOpened " + channel.nodeId)
                 // Send the CSV file to the phone and check if send was successful
                 channelClient.sendFile(channel, csvFile.toUri()).addOnCompleteListener { task ->
                     if (task.isSuccessful) {
-                        WatchActivityHandler.fileSendStatus(true)
                         sendChecksumToPhone(checksum, nodeId, context)
-                        fileSendSuccessful()
-                        channelClient.close(channel)
+                        sendFileNameToPhone(csvFile.name, nodeId, context)
+                        fileSendOk = true
+                        //fileSendSuccessful()
                     } else {
                         Log.e(TAG, "Error with file sending " + task.exception.toString())
-                        WatchActivityHandler.fileSendStatus(false)
-                        fileSendTerminated()
-                        channelClient.close(channel)
+                        fileSendOk = false
+                        //fileSendTerminated()
+
                     }
+                    WatchActivityHandler.fileSendStatus(fileSendOk)
+                    val openSendInfo = Intent(applicationContext, FileSendActivity::class.java)
+                    startActivity(openSendInfo)
+                    finish()
+                    channelClient.close(channel)
                 }
+
             }
 
             override fun onChannelClosed(
@@ -441,16 +447,37 @@ class SendSurveysActivity: Activity() {
 
     private fun sendChecksumToPhone(checksum: String, nodeId: String, context: Context) {
         val messageClient = Wearable.getMessageClient(context)
-        val checksumPath = "$CSV_FILE_CHANNEL_PATH"
+        val checksumPath = "/checksum" // message identifier tag
 
         messageClient.sendMessage(nodeId, checksumPath, checksum.toByteArray()).addOnCompleteListener { task ->
             if (task.isSuccessful) {
-                Log.d("verifyChecksum", "Checksum sent successfully. Value: $checksum")
+                Log.d(TAG, "Checksum sent successfully. Value: $checksum")
+
             } else {
                 Log.e(TAG, "Error sending checksum: ${task.exception}")
             }
         }
+
+
     }
+
+
+    private fun sendFileNameToPhone(fileName: String, nodeId: String, context: Context) {
+        val messageClient = Wearable.getMessageClient(context)
+        val filenamePath = "/file-name" // message identifier tag
+
+        messageClient.sendMessage(nodeId, filenamePath, fileName.toByteArray()).addOnCompleteListener { task ->
+            if (task.isSuccessful) {
+
+                Log.d(TAG, "File name sent successfully. Filename: $fileName")
+
+            } else {
+                Log.e(TAG, "Error sending filename: ${task.exception}")
+            }
+        }
+
+    }
+
 }
 
 // Separate class for RecyclerView items in RecyclerView activity_send_surveys.xml
