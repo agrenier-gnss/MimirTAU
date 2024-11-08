@@ -10,6 +10,8 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
+import android.location.GnssStatus
+import android.location.LocationManager
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.os.Environment
@@ -18,7 +20,9 @@ import android.os.Looper
 import android.os.SystemClock
 import android.provider.MediaStore
 import android.util.Log
+import android.view.LayoutInflater
 import android.view.View
+import android.view.ViewGroup
 import android.widget.Button
 import android.widget.TextView
 import android.widget.Toast
@@ -27,6 +31,8 @@ import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.google.android.gms.wearable.ChannelClient
 import com.google.android.gms.wearable.MessageEvent
 import com.google.android.gms.wearable.Wearable
@@ -63,6 +69,12 @@ class MainActivity : AppCompatActivity() {
     private var sensorTextViewList = mutableMapOf<SensorType, TextView>()
 
     private val fileAccessLock = Object()
+
+    private lateinit var locationManager: LocationManager
+
+    private lateinit var satelliteRecyclerView: RecyclerView
+    private lateinit var satelliteAdapter: SatelliteAdapter
+    private val satelliteList = mutableListOf<String>()
 
     // ---------------------------------------------------------------------------------------------
 
@@ -143,15 +155,21 @@ class MainActivity : AppCompatActivity() {
         supportActionBar?.hide()
 
         // Register the receiver to listen for checksum broadcasts
-        registerReceiver(checksumReceiver, IntentFilter("ACTION_VERIFY_CHECKSUM"),
-            RECEIVER_NOT_EXPORTED)
+        registerReceiver(
+            checksumReceiver, IntentFilter("ACTION_VERIFY_CHECKSUM"),
+            RECEIVER_NOT_EXPORTED
+        )
         // Create communication with the watch
         val channelClient = Wearable.getChannelClient(applicationContext)
         channelClient.registerChannelCallback(object : ChannelClient.ChannelCallback() {
             override fun onChannelOpened(channel: ChannelClient.Channel) {
                 val fileName = "log_watch_received_${
-                    LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmssSSS"))}.csv"
-                file = File(applicationContext.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS), fileName)
+                    LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmssSSS"))
+                }.csv"
+                file = File(
+                    applicationContext.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS),
+                    fileName
+                )
 
                 val receiveTask = channelClient.receiveFile(channel, file.toUri(), false)
                 receiveTask.addOnCompleteListener { task ->
@@ -168,23 +186,23 @@ class MainActivity : AppCompatActivity() {
         this.checkPermissions()
 
         loggingButton = findViewById(R.id.logging_button)
-        settingsBtn   = findViewById(R.id.settings_button)
-        dataButton    = findViewById(R.id.download_data_button)
-        loggingText   = findViewById(R.id.logging_text_view)
+        settingsBtn = findViewById(R.id.settings_button)
+        dataButton = findViewById(R.id.download_data_button)
+        loggingText = findViewById(R.id.logging_text_view)
 
         sensorTextViewList = mutableMapOf(
-            SensorType.TYPE_GNSS_MEASUREMENTS           to findViewById(R.id.tv_gnss_raw_check),
-            SensorType.TYPE_GNSS_LOCATION               to findViewById(R.id.tv_gnss_pos_check),
-            SensorType.TYPE_GNSS_MESSAGES               to findViewById(R.id.tv_gnss_nav_check),
-            SensorType.TYPE_ACCELEROMETER               to findViewById(R.id.tv_imu_acc_check),
-            SensorType.TYPE_ACCELEROMETER_UNCALIBRATED  to findViewById(R.id.tv_imu_acc_check),
-            SensorType.TYPE_GYROSCOPE                   to findViewById(R.id.tv_imu_gyr_check),
-            SensorType.TYPE_GYROSCOPE_UNCALIBRATED      to findViewById(R.id.tv_imu_gyr_check),
-            SensorType.TYPE_MAGNETIC_FIELD              to findViewById(R.id.tv_imu_mag_check),
+            SensorType.TYPE_GNSS_MEASUREMENTS to findViewById(R.id.tv_gnss_raw_check),
+            SensorType.TYPE_GNSS_LOCATION to findViewById(R.id.tv_gnss_pos_check),
+            SensorType.TYPE_GNSS_MESSAGES to findViewById(R.id.tv_gnss_nav_check),
+            SensorType.TYPE_ACCELEROMETER to findViewById(R.id.tv_imu_acc_check),
+            SensorType.TYPE_ACCELEROMETER_UNCALIBRATED to findViewById(R.id.tv_imu_acc_check),
+            SensorType.TYPE_GYROSCOPE to findViewById(R.id.tv_imu_gyr_check),
+            SensorType.TYPE_GYROSCOPE_UNCALIBRATED to findViewById(R.id.tv_imu_gyr_check),
+            SensorType.TYPE_MAGNETIC_FIELD to findViewById(R.id.tv_imu_mag_check),
             SensorType.TYPE_MAGNETIC_FIELD_UNCALIBRATED to findViewById(R.id.tv_imu_mag_check),
-            SensorType.TYPE_PRESSURE                    to findViewById(R.id.tv_baro_check),
-            SensorType.TYPE_STEP_DETECTOR               to findViewById(R.id.tv_steps_detect_check),
-            SensorType.TYPE_STEP_COUNTER                to findViewById(R.id.tv_steps_counter_check)
+            SensorType.TYPE_PRESSURE to findViewById(R.id.tv_baro_check),
+            SensorType.TYPE_STEP_DETECTOR to findViewById(R.id.tv_steps_detect_check),
+            SensorType.TYPE_STEP_COUNTER to findViewById(R.id.tv_steps_counter_check)
         )
 
         var isInitialLoad = true
@@ -211,7 +229,7 @@ class MainActivity : AppCompatActivity() {
                 return@observe
             }
 
-            if(isPressed) {
+            if (isPressed) {
                 startLogging(this)
             } else {
                 stopLogging()
@@ -219,7 +237,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         // Set settings button
-        settingsBtn.setOnClickListener{
+        settingsBtn.setOnClickListener {
             val openSettings = Intent(applicationContext, SettingsActivity::class.java)
             startActivity(openSettings)
         }
@@ -229,20 +247,49 @@ class MainActivity : AppCompatActivity() {
         if (sharedPreferences.contains("GNSS")) {
             var mparam = loadMutableList("GNSS")
             ActivityHandler.sensorsSelected[SensorType.TYPE_GNSS] = Pair(
-                mparam[0] as Boolean, (mparam[1] as Double).toInt())
+                mparam[0] as Boolean, (mparam[1] as Double).toInt()
+            )
             mparam = loadMutableList("IMU")
             ActivityHandler.sensorsSelected[SensorType.TYPE_IMU] = Pair(
-                mparam[0] as Boolean, (mparam[1] as Double).toInt())
+                mparam[0] as Boolean, (mparam[1] as Double).toInt()
+            )
             mparam = loadMutableList("PSR")
             ActivityHandler.sensorsSelected[SensorType.TYPE_PRESSURE] = Pair(
-                mparam[0] as Boolean, (mparam[1] as Double).toInt())
+                mparam[0] as Boolean, (mparam[1] as Double).toInt()
+            )
             mparam = loadMutableList("STEPS")
             ActivityHandler.sensorsSelected[SensorType.TYPE_STEPS] = Pair(
-                mparam[0] as Boolean, (mparam[1] as Double).toInt())
+                mparam[0] as Boolean, (mparam[1] as Double).toInt()
+            )
         }
 
         // Register broadcoaster
-        registerReceiver(sensorCheckReceiver, IntentFilter("SENSOR_CHECK_UPDATE"), RECEIVER_NOT_EXPORTED)
+        registerReceiver(
+            sensorCheckReceiver,
+            IntentFilter("SENSOR_CHECK_UPDATE"),
+            RECEIVER_NOT_EXPORTED
+        )
+
+        // Initialize LocationManager for GNSS Satellite info
+        locationManager = getSystemService(LOCATION_SERVICE) as LocationManager
+
+        satelliteRecyclerView = findViewById(R.id.satelliteRecyclerView)
+        satelliteRecyclerView.layoutManager = LinearLayoutManager(this)
+        satelliteAdapter = SatelliteAdapter(satelliteList)
+        satelliteRecyclerView.adapter = satelliteAdapter
+
+        // Check for location permission before starting
+        if (ContextCompat.checkSelfPermission(
+                this,
+                android.Manifest.permission.ACCESS_FINE_LOCATION
+            ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        ) {
+            startTrackingSatellites()
+        } else {
+            // Request permissions if not granted
+            requestPermissions(arrayOf(android.Manifest.permission.ACCESS_FINE_LOCATION), 1001)
+        }
+
     }
     private fun loadMutableList(key:String): MutableList<String> {
         val jsonString = sharedPreferences.getString(key, "")
@@ -387,14 +434,6 @@ class MainActivity : AppCompatActivity() {
         timeText.text = "$durationText"
     }
 
-    override fun onDestroy() {
-        // Remove the updateRunnable when the activity is destroyed to prevent memory leaks
-        unregisterReceiver(sensorCheckReceiver)
-        durationHandler.removeCallbacks(updateRunnableDuration)
-        unregisterReceiver(checksumReceiver)
-        super.onDestroy()
-    }
-
     private fun verifyChecksum(context: Context, file: File, expectedChecksum: String) {
         synchronized(fileAccessLock) {
             val rootView = (context as Activity).findViewById<View>(android.R.id.content)
@@ -475,6 +514,69 @@ class MainActivity : AppCompatActivity() {
         val hashBytes = digest.digest(data)
         return hashBytes.joinToString("") { "%02x".format(it) }
     }
+
+    private fun startTrackingSatellites() {
+        locationManager.registerGnssStatusCallback(gnssStatusCallback, null)
+    }
+
+    private val gnssStatusCallback = object : GnssStatus.Callback() {
+        override fun onSatelliteStatusChanged(status: GnssStatus) {
+            super.onSatelliteStatusChanged(status)
+
+            val satellites = mutableListOf<String>()
+            for (i in 0 until status.satelliteCount) {
+                val svid = status.getSvid(i)
+                val constellationType = getConstellationTypeName(status.getConstellationType(i))
+                val azimuth = status.getAzimuthDegrees(i)
+                val elevation = status.getElevationDegrees(i)
+                val tracking = status.usedInFix(i)
+
+                val satelliteInfo = "Satellite $svid - $constellationType\n" +
+                        "Azimuth: $azimuth°, Elevation: $elevation°, " +
+                        "Tracking: ${if (tracking) "Yes" else "No"}"
+
+                satellites.add(satelliteInfo)
+            }
+
+            showSatellites(satellites)
+        }
+    }
+
+    private fun showSatellites(satellites: List<String>) {
+        // Sort satellites by SVID in descending order
+        val sortedSatellites = satellites.sortedBy {
+            // Extract SVID number from the satellite string using regex or split
+            it.substringAfter("Satellite ").substringBefore(" -").toIntOrNull() ?: 0
+        }
+
+        // Clear existing data and update the list in the adapter
+        satelliteList.clear()
+        satelliteList.addAll(sortedSatellites)
+        satelliteAdapter.notifyDataSetChanged()
+    }
+
+    private fun getConstellationTypeName(type: Int): String {
+        return when (type) {
+            GnssStatus.CONSTELLATION_GPS -> "GPS"
+            GnssStatus.CONSTELLATION_GLONASS -> "GLONASS"
+            GnssStatus.CONSTELLATION_BEIDOU -> "BeiDou"
+            GnssStatus.CONSTELLATION_GALILEO -> "Galileo"
+            GnssStatus.CONSTELLATION_SBAS -> "SBAS"
+            GnssStatus.CONSTELLATION_IRNSS -> "IRNSS"
+            GnssStatus.CONSTELLATION_QZSS -> "QZSS"
+            GnssStatus.CONSTELLATION_UNKNOWN -> "Unknown"
+            else -> "Unknown"
+        }
+    }
+
+    override fun onDestroy() {
+        // Remove the updateRunnable when the activity is destroyed to prevent memory leaks
+        unregisterReceiver(sensorCheckReceiver)
+        durationHandler.removeCallbacks(updateRunnableDuration)
+        unregisterReceiver(checksumReceiver)
+        locationManager.unregisterGnssStatusCallback(gnssStatusCallback)
+        super.onDestroy()
+    }
 }
 // =================================================================================================
 
@@ -550,4 +652,26 @@ class ChecksumListenerService : WearableListenerService() {
         }
     }
 
+}
+
+class SatelliteAdapter(private val satellites: List<String>) :
+    RecyclerView.Adapter<SatelliteAdapter.SatelliteViewHolder>() {
+
+    class SatelliteViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+        val satelliteInfo: TextView = itemView.findViewById(R.id.satelliteInfo)
+    }
+
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): SatelliteViewHolder {
+        val view = LayoutInflater.from(parent.context)
+            .inflate(R.layout.item_satellite, parent, false)
+        return SatelliteViewHolder(view)
+    }
+
+    override fun onBindViewHolder(holder: SatelliteViewHolder, position: Int) {
+        holder.satelliteInfo.text = satellites[position]
+    }
+
+    override fun getItemCount(): Int {
+        return satellites.size
+    }
 }
