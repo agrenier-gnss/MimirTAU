@@ -434,6 +434,8 @@ class MainActivity : AppCompatActivity() {
         timeText.text = "$durationText"
     }
 
+    // =================================================================================================
+
     private fun verifyChecksum(context: Context, file: File, expectedChecksum: String) {
         synchronized(fileAccessLock) {
             val rootView = (context as Activity).findViewById<View>(android.R.id.content)
@@ -515,6 +517,8 @@ class MainActivity : AppCompatActivity() {
         return hashBytes.joinToString("") { "%02x".format(it) }
     }
 
+    // =================================================================================================
+
     private fun startTrackingSatellites() {
         locationManager.registerGnssStatusCallback(gnssStatusCallback, null)
     }
@@ -543,17 +547,38 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showSatellites(satellites: List<String>) {
-        // Sort satellites by SVID in descending order
-        val sortedSatellites = satellites.sortedBy {
-            // Extract SVID number from the satellite string using regex or split
-            it.substringAfter("Satellite ").substringBefore(" -").toIntOrNull() ?: 0
+        satelliteList.clear()
+
+        val constellationCounts = mutableMapOf(
+            "GPS" to 0,
+            "GLONASS" to 0,
+            "BeiDou" to 0,
+            "Galileo" to 0,
+            "SBAS" to 0,
+            "IRNSS" to 0,
+            "QZSS" to 0,
+            "Unknown" to 0
+        )
+
+        satellites.forEach { satellite ->
+            val type = constellationCounts.keys.find { satellite.contains(it) } ?: "Unknown"
+            constellationCounts[type] = constellationCounts[type]!! + 1
         }
 
-        // Clear existing data and update the list in the adapter
-        satelliteList.clear()
-        satelliteList.addAll(sortedSatellites)
+        satelliteList.add("Satellites connected (${satellites.size})")
+        constellationCounts.forEach { (type, count) ->
+            if (count > 0) satelliteList.add("$type ($count)")
+        }
+
+//        // Sort satellites in ascending order by SVID and add them to the list after the summary
+//        satelliteList.addAll(satellites.sortedBy {
+//            it.substringAfter("Satellite ").substringBefore(" -").toIntOrNull() ?: 0
+//        })
+
         satelliteAdapter.notifyDataSetChanged()
     }
+
+
 
     private fun getConstellationTypeName(type: Int): String {
         return when (type) {
