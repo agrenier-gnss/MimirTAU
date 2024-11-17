@@ -41,6 +41,8 @@
         </activity>
         <activity android:name=".SettingsActivity">
         </activity>
+        <activity android:name=".SettingsNewActivity" >
+        </activity>
         <activity android:name=".LogEventActivity">
         </activity>
         <activity android:name=".SurveyHistoryActivity"/>

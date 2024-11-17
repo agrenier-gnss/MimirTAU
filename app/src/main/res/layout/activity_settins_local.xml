@@ -6,8 +6,7 @@
     android:id="@+id/activity_main_layout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/light_gray"
-    tools:context=".SettingsActivity">
+    android:background="@color/light_gray">
 
     <ScrollView
         android:id="@+id/scroll_id"
@@ -19,8 +18,7 @@
         app:layout_constraintLeft_toLeftOf="parent"
         app:layout_constraintRight_toRightOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        tools:ignore="NotSibling">
+        app:layout_constraintTop_toTopOf="parent">
 
         <androidx.constraintlayout.widget.ConstraintLayout
             android:layout_width="match_parent"
@@ -45,7 +43,7 @@
                 android:layout_width="220dp"
                 android:layout_height="50dp"
                 android:ems="10"
-                android:text="Watch logging"
+                android:text="Sensor logging"
                 android:textColor="@color/white"
                 android:textSize="30sp"
                 app:layout_constraintEnd_toEndOf="parent"
@@ -104,19 +102,6 @@
                 app:layout_constraintStart_toEndOf="@+id/settings"
                 app:layout_constraintTop_toTopOf="@+id/settings" />
 
-            <Button
-                android:id="@+id/button_control"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Control"
-                app:layout_constraintTop_toBottomOf="@+id/button_default"
-                app:layout_constraintStart_toStartOf="@+id/button_default"
-                app:layout_constraintEnd_toEndOf="@+id/button_default"
-                android:layout_marginTop="5dp"
-                />
-
-
-
             <LinearLayout
                 android:id="@+id/square_layout"
                 android:layout_width="match_parent"
@@ -127,7 +112,7 @@
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintLeft_toLeftOf="parent"
                 app:layout_constraintRight_toRightOf="parent"
-                app:layout_constraintTop_toBottomOf="@id/button_control"
+                app:layout_constraintTop_toBottomOf="@id/settings"
                 android:layout_marginBottom="20dp">
 
             </LinearLayout>

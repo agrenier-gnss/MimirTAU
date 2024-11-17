@@ -191,7 +191,7 @@ class MainActivity : AppCompatActivity() {
 
         // Set settings button
         settingsBtn.setOnClickListener{
-            val openSettings = Intent(applicationContext, SettingsActivity::class.java)
+            val openSettings = Intent(applicationContext, SettingsNewActivity::class.java)
             startActivity(openSettings)
         }
 

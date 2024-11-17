@@ -2,9 +2,6 @@ package com.mobilewizards.logging_app
 
 import android.Manifest
 import android.annotation.SuppressLint
-import android.bluetooth.BluetoothDevice
-import android.bluetooth.le.ScanFilter
-import android.bluetooth.le.ScanSettings
 import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
@@ -12,18 +9,17 @@ import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.icu.text.SimpleDateFormat
 import android.os.Build
-import androidx.appcompat.app.AlertDialog
 import android.os.Bundle
 import android.os.Environment
 import android.provider.MediaStore
 import android.util.Log
 import android.view.*
 import android.widget.*
-import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.SwitchCompat
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
+import androidx.fragment.app.Fragment
 import com.google.android.gms.wearable.ChannelClient
 import com.google.android.gms.wearable.Wearable
 import com.mimir.sensors.SensorType
@@ -34,11 +30,10 @@ import java.io.BufferedReader
 import java.io.File
 import java.io.FileReader
 import java.lang.reflect.Type
-import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
 
 
-class SettingsActivity : AppCompatActivity() {
+
+class FirstSettingPage : Fragment() {
 
     val IDX_SWITCH   = 0
     val IDX_SEEKBAR  = 1
@@ -46,7 +41,7 @@ class SettingsActivity : AppCompatActivity() {
     private val VERSION_TAG = "Version: "
     private val COMMENT_START = "# "
     private val TAG = "connect: "
-    private val sharedPrefName = "DefaultSettings"
+    private val sharedPrefName = "DefaultSettings_watch"
     private val CSV_FILE_CHANNEL_PATH = MediaStore.Downloads.EXTERNAL_CONTENT_URI
     private lateinit var sharedPreferences: SharedPreferences
     private val progressToFrequency = arrayOf(1, 5, 10, 50, 100, 200, 0)
@@ -54,15 +49,41 @@ class SettingsActivity : AppCompatActivity() {
     private lateinit var sensorsComponents : MutableMap<String, MutableList<Any?>>
     private lateinit var bleHandler: BLEHandler
     private var fileSendOk : Boolean = true
+
+    interface SettingsFragmentListener {
+        fun onSaveSettings()
+
+    }
+    private lateinit var listener: SettingsFragmentListener
+
+    override fun onAttach(context: Context) {
+        super.onAttach(context)
+        if (context is SettingsFragmentListener) {
+            listener = context
+        } else {
+            throw RuntimeException("$context must implement SettingsFragmentListener")
+        }
+    }
+
+
     @SuppressLint("ClickableViewAccessibility")
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_settings)
-        supportActionBar?.hide()
-        val parentView = findViewById<ViewGroup>(R.id.square_layout)
+    override fun onCreateView(
+        inflater: LayoutInflater, container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View? {
+        // Inflate the layout for this fragment
+        return inflater.inflate(R.layout.activity_settings, container, false)
+    }
+
+    override fun onViewCreated(
+        view: View, savedInstanceState: Bundle?
+    ) {
+        super.onViewCreated(view, savedInstanceState)
+
+        val parentView = view.findViewById<ViewGroup>(R.id.square_layout)
 
         // Initialisation values
-        sharedPreferences = getSharedPreferences(sharedPrefName, Context.MODE_PRIVATE)
+        sharedPreferences = requireActivity().getSharedPreferences(sharedPrefName, Context.MODE_PRIVATE)
         if (!sharedPreferences.contains("GNSS")) {
             val editor: SharedPreferences.Editor = sharedPreferences.edit()
             editor.putString("GNSS",   Gson().toJson(mutableListOf(true, 0)))
@@ -158,15 +179,14 @@ class SettingsActivity : AppCompatActivity() {
         saveSettings() // Save default settings
 
         // Saving settings
-        val btnSave = findViewById<Button>(R.id.button_save)
+        val btnSave = view.findViewById<Button>(R.id.button_save)
         btnSave.setOnClickListener {
             saveSettings()
-            setResult(RESULT_OK)
-            finish() // Close activity
+            listener.onSaveSettings() // Close activity
         }
 
         // Save current settings as default
-        val btnDefault = findViewById<Button>(R.id.button_default)
+        val btnDefault = view.findViewById<Button>(R.id.button_default)
         btnDefault.setOnClickListener {
             saveDefaultSettings()
         }
@@ -174,7 +194,7 @@ class SettingsActivity : AppCompatActivity() {
 
 
         //control button
-        val btnControl = findViewById<Button>(R.id.button_control)
+        val btnControl = view.findViewById<Button>(R.id.button_control)
         btnControl.setOnClickListener{
             sendFiles()
         }
@@ -189,7 +209,7 @@ class SettingsActivity : AppCompatActivity() {
 
             if (connectedNode.isEmpty()) {
                 Log.d(TAG, "no nodes found")
-                Toast.makeText(this, "Watch not connected", Toast.LENGTH_SHORT).show()
+                Toast.makeText(requireContext(), "Watch not connected", Toast.LENGTH_SHORT).show()
             } else {
                 Log.d(TAG, "nodes found, sending")
                 val currentTimestamp = System.currentTimeMillis()
@@ -220,18 +240,18 @@ class SettingsActivity : AppCompatActivity() {
                             put("value",progressToFrequency[(entry.value[IDX_SEEKBAR] as? SeekBar)?.progress as Int])
                         })
                     }
-/*
-                    // Added health sensor for LoggingService
-                    ActivityHandler.sensorsSelected[SensorType.TYPE_SPECIFIC_ECG] = Pair(false, 0)
-                    ActivityHandler.sensorsSelected[SensorType.TYPE_SPECIFIC_PPG] = Pair(false, 0)
-                    ActivityHandler.sensorsSelected[SensorType.TYPE_SPECIFIC_GSR] = Pair(false, 0)*/
+                    /*
+                                        // Added health sensor for LoggingService
+                                        ActivityHandler.sensorsSelected[SensorType.TYPE_SPECIFIC_ECG] = Pair(false, 0)
+                                        ActivityHandler.sensorsSelected[SensorType.TYPE_SPECIFIC_PPG] = Pair(false, 0)
+                                        ActivityHandler.sensorsSelected[SensorType.TYPE_SPECIFIC_GSR] = Pair(false, 0)*/
                 }
-                 // Tag for JSON data
+                // Tag for JSON data
                 val jsonTag = "JSON_DATA_START"
-                val uri = this.contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, contentValues)
+                val uri = requireContext().contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, contentValues)
                 var path = ""
                 uri?.let { mediaUri ->
-                    this.contentResolver.openOutputStream(mediaUri)?.use { outputStream ->
+                    requireActivity().contentResolver.openOutputStream(mediaUri)?.use { outputStream ->
 
                         outputStream.write(COMMENT_START.toByteArray())
                         outputStream.write("setting_app_${SimpleDateFormat("ddMMyyyy_hhmmssSSS").format(currentTimestamp)}.csv\n".toByteArray())
@@ -276,7 +296,7 @@ class SettingsActivity : AppCompatActivity() {
                         }
                         outputStream.flush()
 
-                        val cursor = contentResolver.query(mediaUri, null, null, null, null)
+                        val cursor = requireContext().contentResolver.query(mediaUri, null, null, null, null)
                         cursor?.use { c ->
                             if (c.moveToFirst()) {
                                 path = c.getString(c.getColumnIndex(MediaStore.Images.Media.DATA))
@@ -286,13 +306,13 @@ class SettingsActivity : AppCompatActivity() {
                         }
                     }
                 }
-                sendCsvFileToPhone(File(path), connectedNode, this)
+                sendCsvFileToPhone(File(path), connectedNode, requireContext())
             }
         }
     }
     private fun getWatchNodeId(callback: (ArrayList<String>) -> Unit) {
         val nodeIds = ArrayList<String>()
-        Wearable.getNodeClient(this).connectedNodes.addOnSuccessListener { nodes ->
+        Wearable.getNodeClient(requireActivity()).connectedNodes.addOnSuccessListener { nodes ->
             for (node in nodes) {
                 Log.d(TAG, "connected node in getWatchId " + node.id)
                 nodeIds.add(node.id)
@@ -304,13 +324,13 @@ class SettingsActivity : AppCompatActivity() {
         if (fileSendOk != true){
             fileSendOk = true
         }
-        Toast.makeText(this, "succeed", Toast.LENGTH_SHORT).show()
+        Toast.makeText(requireContext(), "succeed", Toast.LENGTH_SHORT).show()
     }
     private fun fileSendTerminated(){
         if (fileSendOk != false){
             fileSendOk = false
         }
-        Toast.makeText(this, "failed", Toast.LENGTH_SHORT).show()
+        Toast.makeText(requireContext(), "failed", Toast.LENGTH_SHORT).show()
     }
     private fun sendCsvFileToPhone(csvFile: File, nodeId: String, context: Context) {
         Log.d(TAG, "in sendCsvFileToPhone " + csvFile.name)
@@ -345,7 +365,7 @@ class SettingsActivity : AppCompatActivity() {
                     TAG,
                     "Channel closed: nodeId=$nodeId, reason=$closeReason, errorCode=$appSpecificErrorCode"
                 )
-                Wearable.getChannelClient(applicationContext).close(channel)
+                Wearable.getChannelClient(requireContext()).close(channel)
             }
         }
 
@@ -383,13 +403,13 @@ class SettingsActivity : AppCompatActivity() {
         )
 
         val permissionsToRequest = permissions.filter {
-            ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
+            ContextCompat.checkSelfPermission(requireActivity(), it) != PackageManager.PERMISSION_GRANTED
         }
 
         if (permissionsToRequest.isNotEmpty()) {
-            ActivityCompat.requestPermissions(this, permissionsToRequest.toTypedArray(), 1)
+            ActivityCompat.requestPermissions(requireActivity(), permissionsToRequest.toTypedArray(), 1)
         } else {
-            bleHandler = BLEHandler(this)
+            bleHandler = BLEHandler(requireContext())
         }
     }
 
@@ -405,14 +425,15 @@ class SettingsActivity : AppCompatActivity() {
 
             if (deniedPermissions.isNotEmpty()) {
                 // All permissions are granted, proceed with Bluetooth operations
-                Toast.makeText(this, "${deniedPermissions.joinToString(", ")}", Toast.LENGTH_LONG).show()
+                Toast.makeText(requireContext(), "${deniedPermissions.joinToString(", ")}", Toast.LENGTH_LONG).show()
             } else {
                 // Permissions are denied, show a message to the user
-                bleHandler = BLEHandler(this)
+                bleHandler = BLEHandler(requireContext())
             }
         }
     }
 
+    // ---------------------------------------------------------------------------------------------
 
 
 
@@ -429,6 +450,7 @@ class SettingsActivity : AppCompatActivity() {
                 "IMU"  -> mkey = SensorType.TYPE_IMU
                 "PSR"  -> mkey = SensorType.TYPE_PRESSURE
                 "STEPS"-> mkey = SensorType.TYPE_STEPS
+
             }
             if (entry.key == "GNSS") {
                 ActivityHandler.sensorsSelected[mkey] = Pair(
@@ -491,46 +513,17 @@ class SettingsActivity : AppCompatActivity() {
         }
         editor.apply()
         Log.d("SettingsActivity", "Default settings saved.")
-        Toast.makeText(applicationContext, "Default settings saved.", Toast.LENGTH_SHORT).show()
+        Toast.makeText(requireContext(), "Default settings saved.", Toast.LENGTH_SHORT).show()
     }
 
     // ---------------------------------------------------------------------------------------------
 
-    fun scanBleDevice(){
-        val filters: List<ScanFilter> = emptyList()
-        val settings: ScanSettings = ScanSettings.Builder()
-            .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY)
-            .build()
-       // bleHandler.setUpLogging()
-        bleHandler.setUpLoggingWithFilter(filters,settings)
-    }
 
-    fun stopScanBleDevice(){
-        bleHandler.stopScanDevice()
-        val scanResult = bleHandler.getBLEValues()
-        val scanDeviceResult = bleHandler.getBlEDeviceValues();
-        displayScanResults(scanResult, scanDeviceResult)
-    }
-
-    @SuppressLint("MissingPermission")
-    private fun displayScanResults(scanResults: MutableList<String>, scanDevicesResults:MutableList<BluetoothDevice>) {
-        // Display or process the scan results
-        val targetMacAddress = "90:F0:52:BD:C1:24"
-        scanResults.forEach { result ->
-            Log.d("ScanResult", result)
-        }
-        scanDevicesResults.forEach{ result ->
-            Log.d("ScanResultDevice", "${result.getAddress()}:${result.type}:${result.name}")
-            if(result.address.equals(targetMacAddress)){
-                Log.d("found the target device", "found the target device")
-            }
-        }
-    }
 
     // Creates main_menu.xml
-    override fun onCreateOptionsMenu(menu: Menu?): Boolean {
-        menuInflater.inflate(R.menu.toolbar_menu, menu)
-        return true
+    override fun onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
+        inflater.inflate(R.menu.toolbar_menu, menu)
+        super.onCreateOptionsMenu(menu, inflater)
     }
 
     // ---------------------------------------------------------------------------------------------
@@ -538,7 +531,7 @@ class SettingsActivity : AppCompatActivity() {
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         when (item.itemId) {
             R.id.changeParameters -> {
-                val setupIntent = Intent(applicationContext, SetupActivity::class.java)
+                val setupIntent = Intent(requireContext(), SetupActivity::class.java)
                 startActivity(setupIntent)
             }
         }
