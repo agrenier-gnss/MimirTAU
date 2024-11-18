@@ -18,11 +18,12 @@ class SettingsNewActivity : AppCompatActivity(),
         supportActionBar?.hide()
         val tabLayout = findViewById<TabLayout>(R.id.tab_layout)
         val viewPager = findViewById<ViewPager>(R.id.pager)
-
+        val goBackButton = findViewById<Button>(R.id.button_back)
         val adapter = MyPagerAdapter(supportFragmentManager)
         viewPager.adapter = adapter
 
         tabLayout.setupWithViewPager(viewPager)
+        goBackButton.setOnClickListener {onBackPressedDispatcher.onBackPressed();}
 
 
     }

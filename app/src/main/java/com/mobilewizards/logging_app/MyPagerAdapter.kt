@@ -6,8 +6,8 @@ import androidx.fragment.app.FragmentPagerAdapter
 
 class MyPagerAdapter(fm: FragmentManager) : FragmentPagerAdapter(fm, BEHAVIOR_RESUME_ONLY_CURRENT_FRAGMENT) {
 
-    private val fragmentList = listOf(FirstSettingPage(), SecondSettingPage())
-    private val fragmentTitleList = listOf("Watch", "Local")
+    private val fragmentList = listOf(SecondSettingPage(), FirstSettingPage())
+    private val fragmentTitleList = listOf("Phone", "Watch")
 
     override fun getCount(): Int = fragmentList.size
 
