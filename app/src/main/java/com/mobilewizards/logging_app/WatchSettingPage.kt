@@ -33,7 +33,7 @@ import java.lang.reflect.Type
 
 
 
-class FirstSettingPage : Fragment() {
+class WatchSettingPage : Fragment() {
 
     val IDX_SWITCH   = 0
     val IDX_SEEKBAR  = 1
@@ -72,7 +72,7 @@ class FirstSettingPage : Fragment() {
         savedInstanceState: Bundle?
     ): View? {
         // Inflate the layout for this fragment
-        return inflater.inflate(R.layout.activity_settings, container, false)
+        return inflater.inflate(R.layout.activity_settings_watch, container, false)
     }
 
     override fun onViewCreated(
@@ -84,12 +84,15 @@ class FirstSettingPage : Fragment() {
 
         // Initialisation values
         sharedPreferences = requireActivity().getSharedPreferences(sharedPrefName, Context.MODE_PRIVATE)
-        if (!sharedPreferences.contains("GNSS")) {
+        if (!sharedPreferences.contains("ECG")) {
             val editor: SharedPreferences.Editor = sharedPreferences.edit()
             editor.putString("GNSS",   Gson().toJson(mutableListOf(true, 0)))
             editor.putString("IMU",   Gson().toJson(mutableListOf(false, 2)))
             editor.putString("PSR",   Gson().toJson(mutableListOf(false, 0)))
             editor.putString("STEPS", Gson().toJson(mutableListOf(false, 1)))
+            editor.putString("ECG", Gson().toJson(mutableListOf(false, 4)))
+            editor.putString("PPG", Gson().toJson(mutableListOf(false, 4)))
+            editor.putString("GSR", Gson().toJson(mutableListOf(false, 4)))
             editor.apply()
         }
         checkAndRequestBluetoothPermissions()
@@ -98,7 +101,7 @@ class FirstSettingPage : Fragment() {
             filePaths.add(path)
         }
         // Load from shared preferences
-        val sensorsInit = arrayOf("GNSS", "IMU", "PSR", "STEPS")
+        val sensorsInit = arrayOf("GNSS", "IMU", "PSR", "STEPS","ECG","PPG","GSR")
 
         //create a layout for each sensor in sensorList
         sensorsComponents = mutableMapOf()
@@ -126,6 +129,23 @@ class FirstSettingPage : Fragment() {
             sensorSwitch.setOnCheckedChangeListener { _, isChecked ->
                 setStateTextview(sensorSwitch.isChecked, sensorStateTextView)
                 ActivityHandler.setToggle(it) //toggle the status in singleton
+                if((it == "ECG" || it =="GSR") && isChecked){
+                    val opponent:String = if(it == "ECG")"GSR" else "ECG";
+                    var GSREnable:Boolean = false;
+                    sensorsComponents[opponent]?.forEach { component ->
+                        when (component) {
+                            is SwitchCompat -> {
+                                GSREnable = component.isChecked
+                                component.isChecked = false
+
+                            }
+                        }
+                    }
+                    if(GSREnable){
+                        ActivityHandler.setToggle(opponent)
+                    }
+                }
+
             }
 
             // Create the layout for each sensor
@@ -178,12 +198,7 @@ class FirstSettingPage : Fragment() {
         }
         saveSettings() // Save default settings
 
-        // Saving settings
-        val btnSave = view.findViewById<Button>(R.id.button_save)
-        btnSave.setOnClickListener {
-            saveSettings()
-            listener.onSaveSettings() // Close activity
-        }
+
 
         // Save current settings as default
         val btnDefault = view.findViewById<Button>(R.id.button_default)
@@ -450,6 +465,9 @@ class FirstSettingPage : Fragment() {
                 "IMU"  -> mkey = SensorType.TYPE_IMU
                 "PSR"  -> mkey = SensorType.TYPE_PRESSURE
                 "STEPS"-> mkey = SensorType.TYPE_STEPS
+                "ECG"  -> mkey = SensorType.TYPE_SPECIFIC_ECG
+                "PPG"  -> mkey = SensorType.TYPE_SPECIFIC_PPG
+                "GSR"  -> mkey = SensorType.TYPE_SPECIFIC_GSR
 
             }
             if (entry.key == "GNSS") {
@@ -462,10 +480,7 @@ class FirstSettingPage : Fragment() {
                     progressToFrequency[(entry.value[IDX_SEEKBAR] as? SeekBar)?.progress as Int]
                 )
             }
-            // Added health sensor for LoggingService
-            ActivityHandler.sensorsSelected[SensorType.TYPE_SPECIFIC_ECG] = Pair(false, 0)
-            ActivityHandler.sensorsSelected[SensorType.TYPE_SPECIFIC_PPG] = Pair(false, 0)
-            ActivityHandler.sensorsSelected[SensorType.TYPE_SPECIFIC_GSR] = Pair(false, 0)
+
             Log.d(
                 "SettingsActivity",
                 "Settings for ${entry.key} changed to " +
@@ -486,6 +501,9 @@ class FirstSettingPage : Fragment() {
                 "IMU"  -> mkey = SensorType.TYPE_IMU
                 "PSR"  -> mkey = SensorType.TYPE_PRESSURE
                 "STEPS"-> mkey = SensorType.TYPE_STEPS
+                "ECG"  -> mkey = SensorType.TYPE_SPECIFIC_ECG
+                "PPG"  -> mkey = SensorType.TYPE_SPECIFIC_PPG
+                "GSR"  -> mkey = SensorType.TYPE_SPECIFIC_GSR
             }
             if(entry.key == "GNSS")
             {
@@ -553,7 +571,6 @@ class FirstSettingPage : Fragment() {
     private fun loadMutableList(key:String): MutableList<String> {
         val jsonString = sharedPreferences.getString(key, "")
         val type: Type = object : TypeToken<MutableList<Any>>() {}.type
-
         return Gson().fromJson(jsonString, type) ?: mutableListOf()
     }
 }

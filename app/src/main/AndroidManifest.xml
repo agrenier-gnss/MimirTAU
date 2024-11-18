@@ -39,9 +39,7 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity android:name=".SettingsActivity">
-        </activity>
-        <activity android:name=".SettingsNewActivity" >
+        <activity android:name=".SettingsActivity" >
         </activity>
         <activity android:name=".LogEventActivity">
         </activity>

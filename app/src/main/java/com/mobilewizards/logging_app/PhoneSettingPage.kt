@@ -18,7 +18,7 @@ import java.lang.reflect.Type
 
 
 
-class SecondSettingPage : Fragment() {
+class PhoneSettingPage : Fragment() {
 
     val IDX_SWITCH   = 0
     val IDX_SEEKBAR  = 1
@@ -52,7 +52,7 @@ class SecondSettingPage : Fragment() {
         savedInstanceState: Bundle?
     ): View? {
         // Inflate the layout for this fragment
-        return inflater.inflate(R.layout.activity_settins_local, container, false)
+        return inflater.inflate(R.layout.activity_settings_phone, container, false)
     }
 
     override fun onViewCreated(

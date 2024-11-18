@@ -13,7 +13,7 @@ class SetupActivity : AppCompatActivity() {
 
         val confirmButton = findViewById<Button>(R.id.confirmButton)
         confirmButton.setOnClickListener{
-            val mainIntent = Intent(this@SetupActivity, SettingsActivity::class.java).apply {
+            val mainIntent = Intent(this@SetupActivity, SettingsActivityDuplicated::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
             }
             startActivity(mainIntent)
