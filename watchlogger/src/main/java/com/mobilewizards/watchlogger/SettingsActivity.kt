@@ -48,7 +48,9 @@ class SettingsActivity : Activity() {
     private lateinit var sharedPreferences: SharedPreferences
     private val progressToFrequency = arrayOf(1, 5, 10, 50, 100, 200, 0)
     private lateinit var sensorsComponents: MutableMap<SensorType, MutableList<Any?>>
-
+    private val frequencyToProgress: Map<Int, Int> = progressToFrequency
+        .mapIndexed { index, frequency -> frequency to index }
+        .toMap()
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -241,35 +243,30 @@ class SettingsActivity : Activity() {
         val keys = jsonData.keys();
         while (keys.hasNext()) {
             val key: String = keys.next()
+            var senorKey:SensorType = SensorType.TYPE_GNSS
             when (key) {
                 "GNSS" -> sensorsComponents[SensorType.TYPE_GNSS]?.let {
                     (it[0] as Switch).isChecked = jsonData.getJSONObject(key).getBoolean("switch")
                 }
-
-                "IMU" -> sensorsComponents[SensorType.TYPE_IMU]?.let {
+                "IMU" -> senorKey = SensorType.TYPE_IMU
+                "PSR" -> senorKey = SensorType.TYPE_PRESSURE
+                "STEPS" -> senorKey = SensorType.TYPE_STEPS
+                "ECG" -> senorKey = SensorType.TYPE_SPECIFIC_ECG
+                "PPG" -> senorKey = SensorType.TYPE_SPECIFIC_PPG
+                "GSR" -> senorKey = SensorType.TYPE_SPECIFIC_GSR
+            }
+            if(senorKey != SensorType.TYPE_GNSS){
+                sensorsComponents[senorKey]?.let {
                     val processValue = jsonData.getJSONObject(key).getInt("value")
+                    Log.d("shared1",processValue.toString())
+                    Log.d("shared1",frequencyToProgress[processValue].toString())
                     (it[0] as Switch).isChecked = jsonData.getJSONObject(key).getBoolean("switch")
                     (it[1] as SeekBar).isEnabled = jsonData.getJSONObject(key).getBoolean("switch")
-                    (it[1] as SeekBar).progress = processValue
-                    (it[2] as TextView).text = "IMU frequency: $processValue Hz"
-                }
-
-                "PSR" -> sensorsComponents[SensorType.TYPE_PRESSURE]?.let {
-                    val processValue = jsonData.getJSONObject(key).getInt("value")
-                    (it[0] as Switch).isChecked = jsonData.getJSONObject(key).getBoolean("switch")
-                    (it[1] as SeekBar).isEnabled = jsonData.getJSONObject(key).getBoolean("switch")
-                    (it[1] as SeekBar).progress = processValue
-                    (it[2] as TextView).text = "Pressure frequency: $processValue Hz"
-                }
-
-                "STEPS" -> sensorsComponents[SensorType.TYPE_STEPS]?.let {
-                    val processValue = jsonData.getJSONObject(key).getInt("value")
-                    (it[0] as Switch).isChecked = jsonData.getJSONObject(key).getBoolean("switch")
-                    (it[1] as SeekBar).isEnabled = jsonData.getJSONObject(key).getBoolean("switch")
-                    (it[1] as SeekBar).progress = processValue
-                    (it[2] as TextView).text = "PTYPE STEPS: $processValue Hz"
+                    (it[1] as SeekBar).progress = frequencyToProgress[processValue]?:0
+                    (it[2] as TextView).text = "${processValue.toString()} Hz"
                 }
             }
+
 
         }
 
@@ -329,25 +326,6 @@ class SettingsActivity : Activity() {
 
 
 
-/*        BufferedReader(FileReader(file)).use { reader ->
-                   var line: String?
-                   var isJsonData = false
-                   val jsonStringBuilder = StringBuilder()
-
-                   while (reader.readLine().also { line = it } != null) {
-                       if (line == jsonTag) {
-                           isJsonData = true
-                           continue
-                       }
-                       if (isJsonData) {
-                           jsonStringBuilder.append(line)
-                       }
-                   }
-                   Log.e("channel", jsonStringBuilder.toString())
-                   if (jsonStringBuilder.isNotEmpty()) {
-                       jsonData = JSONObject(jsonStringBuilder.toString())
-                   }
-               }*/
 
 
 

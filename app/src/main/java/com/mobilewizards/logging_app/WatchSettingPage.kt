@@ -239,18 +239,11 @@ class WatchSettingPage : Fragment() {
                 sensorsComponents.forEach { entry ->
                     val mkey : SensorType = SensorType.TYPE_GNSS
                     when(entry.key){
+
                         "GNSS" -> jsonData.put("GNSS",JSONObject().apply {
                             put("switch", (entry.value[IDX_SWITCH] as? SwitchCompat)?.isChecked as Boolean)
                         })
-                        "IMU"  -> jsonData.put("IMU",JSONObject().apply {
-                            put("switch", (entry.value[IDX_SWITCH] as? SwitchCompat)?.isChecked as Boolean)
-                            put("value",progressToFrequency[(entry.value[IDX_SEEKBAR] as? SeekBar)?.progress as Int])
-                        })
-                        "PSR"  -> jsonData.put("PSR",JSONObject().apply {
-                            put("switch", (entry.value[IDX_SWITCH] as? SwitchCompat)?.isChecked as Boolean)
-                            put("value",progressToFrequency[(entry.value[IDX_SEEKBAR] as? SeekBar)?.progress as Int])
-                        })
-                        "STEPS"-> jsonData.put("STEPS",JSONObject().apply {
+                        else -> jsonData.put(entry.key,JSONObject().apply {
                             put("switch", (entry.value[IDX_SWITCH] as? SwitchCompat)?.isChecked as Boolean)
                             put("value",progressToFrequency[(entry.value[IDX_SEEKBAR] as? SeekBar)?.progress as Int])
                         })
