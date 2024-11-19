@@ -387,10 +387,15 @@ class SendSurveysActivity: Activity() {
 
                 Log.d(TAG, "onChannelOpened " + channel.nodeId)
                 // Send the CSV file to the phone and check if send was successful
+
+
                 channelClient.sendFile(channel, csvFile.toUri()).addOnCompleteListener { task ->
                     if (task.isSuccessful) {
-                        sendChecksumToPhone(checksum, nodeId, context)
+
+                        // will display that file was sent successfully even if the checksum or file name send fail
+                        // TODO: maybe figure out a way to wait here for the async send code to finish before displaying success or failure
                         sendFileNameToPhone(csvFile.name, nodeId, context)
+                        sendChecksumToPhone(checksum, nodeId, context)
                         fileSendOk = true
                         //fileSendSuccessful()
                     } else {

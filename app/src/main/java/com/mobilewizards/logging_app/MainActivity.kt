@@ -111,6 +111,7 @@ class MainActivity: AppCompatActivity() {
 
     private val fileNameReceiver = object: BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
+            Log.d("fileRenameReceive", "file rename broadcast")
             if (intent.action == "RENAME_FILE") {
                 receivedFileName = intent.getStringExtra("filename")
                 Log.d("fileRenameReceive", "Original file name received: $receivedFileName")
@@ -167,6 +168,8 @@ class MainActivity: AppCompatActivity() {
             fileNameReceiver, IntentFilter("RENAME_FILE"), RECEIVER_NOT_EXPORTED
         )
 
+        this.checkPermissions()
+
         // Create communication with the watch
         val channelClient = Wearable.getChannelClient(applicationContext)
         channelClient.registerChannelCallback(object: ChannelClient.ChannelCallback() {
@@ -176,6 +179,8 @@ class MainActivity: AppCompatActivity() {
                 val tempFileName = "log_watch_received_${datetime}.csv"
 
                 file = File(downloadsDir, tempFileName)
+
+                Log.d("fileRenameReceive", "saved file path: :${file.path}")
 
                 val receiveTask = channelClient.receiveFile(channel, file.toUri(), false)
                 receiveTask.addOnCompleteListener { task ->
@@ -188,8 +193,9 @@ class MainActivity: AppCompatActivity() {
                         // Rename the file to the original name if it has been received
                         receivedFileName?.let { originalName ->
                             val originalFile = File(downloadsDir, originalName)
-                            file.renameTo(originalFile)
-                            Log.e("fileRenameReceive", "Received file renamed to original name: ${originalName}")
+                            val success = file.renameTo(originalFile)
+                            Log.d("fileRenameReceive", "rename success: $success")
+                            Log.d("fileRenameReceive", "Received file renamed to original name: ${originalName}")
                             // setting back to null so that no 2 files are named the same on accident
                             receivedFileName = null
                         }
@@ -201,7 +207,7 @@ class MainActivity: AppCompatActivity() {
                 }
             }
         })
-        this.checkPermissions()
+
 
         loggingButton = findViewById(R.id.logging_button)
         settingsBtn = findViewById(R.id.settings_button)
