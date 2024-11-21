@@ -97,6 +97,7 @@ class MainActivity: AppCompatActivity() {
     private val checksumReceiver = object: BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             if (intent.action == "ACTION_VERIFY_CHECKSUM") {
+                Log.w("verifyChecksum", "verify checksum broadcast")
                 val receivedChecksum = intent.getStringExtra("checksum")
                 if (receivedChecksum != null) {
                     verifyChecksum(context, file, receivedChecksum)
@@ -160,12 +161,14 @@ class MainActivity: AppCompatActivity() {
 
         // Register the receiver to listen for checksum broadcasts
         registerReceiver(
-            checksumReceiver, IntentFilter("ACTION_VERIFY_CHECKSUM"), RECEIVER_NOT_EXPORTED
+            checksumReceiver,
+            IntentFilter("ACTION_VERIFY_CHECKSUM"),
+            RECEIVER_EXPORTED // doesn't work with RECEIVER_NOT_EXPORTED
         )
 
         // Register the receiver to listen for filename broadcasts
         registerReceiver(
-            fileNameReceiver, IntentFilter("RENAME_FILE"), RECEIVER_NOT_EXPORTED
+            fileNameReceiver, IntentFilter("RENAME_FILE"), RECEIVER_EXPORTED // doesn't work with RECEIVER_NOT_EXPORTED
         )
 
         this.checkPermissions()
@@ -191,13 +194,15 @@ class MainActivity: AppCompatActivity() {
                         (applicationContext as? GlobalNotification)?.showFileReceivedDialog(file.toString())
 
                         // Rename the file to the original name if it has been received
-                        receivedFileName?.let { originalName ->
-                            val originalFile = File(downloadsDir, originalName)
+                        if (receivedFileName != null) {
+                            val originalFile = File(downloadsDir, receivedFileName)
                             val success = file.renameTo(originalFile)
                             Log.d("fileRenameReceive", "rename success: $success")
-                            Log.d("fileRenameReceive", "Received file renamed to original name: ${originalName}")
+                            Log.d("fileRenameReceive", "Received file renamed to original name: ${receivedFileName}")
                             // setting back to null so that no 2 files are named the same on accident
                             receivedFileName = null
+                        } else {
+                            Log.w("fileRenameReceive", "No file name received! receivedFileName is null")
                         }
 
 
@@ -586,6 +591,7 @@ class MessageListenerService: WearableListenerService() {
             val intent = Intent("ACTION_VERIFY_CHECKSUM")
             intent.putExtra("checksum", checksum)
             sendBroadcast(intent)
+
 
         } else if (messageTag == FILE_NAME_PATH) {
             // Convert the byte array back to a String
