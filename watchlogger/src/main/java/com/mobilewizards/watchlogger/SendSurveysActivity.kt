@@ -232,7 +232,10 @@ class SendSurveysActivity: Activity() {
 
     @SuppressLint("SimpleDateFormat")
     private fun generateCsvFile(csvFile: File): String {
+        // generates the csv file and saves it into the watches' downloaded files
+
         val dateTime = SimpleDateFormat("yyyyMMdd_HHmmssSSS").format(System.currentTimeMillis())
+
         val fileName = "log_watch_$dateTime.csv"
 
         val contentValues = ContentValues().apply {
@@ -245,9 +248,11 @@ class SendSurveysActivity: Activity() {
         var filePath = ""
         uri?.let { mediaUri ->
             this.contentResolver.openOutputStream(mediaUri)?.use { outputStream ->
+                // helper function for output stream
                 fun writeLine(line: String) {
                     outputStream.write("$line\n".toByteArray())
                 }
+
                 writeLine("$COMMENT_START $fileName")
                 writeLine(COMMENT_START)
                 writeLine("$COMMENT_START Header Description:")
@@ -274,12 +279,14 @@ class SendSurveysActivity: Activity() {
                         val columnIndex = c.getColumnIndex(MediaStore.Images.Media.DATA)
                         if (columnIndex >= 0) {
                             filePath = c.getString(columnIndex)
+                            // Use the file path as needed
                             Log.d("File path", filePath)
                         } else {
                             Log.e("Error", "Column MediaStore.Images.Media.DATA not found.")
                         }
                     }
                 }
+
             }
         }
         return filePath
@@ -490,6 +497,8 @@ class FilesAdapter(
     inner class FileViewHolder(view: View): RecyclerView.ViewHolder(view) {
         val fileNameTextView: TextView = view.findViewById(R.id.fileNameTextView)
         val fileCreationTimeTextView: TextView = view.findViewById(R.id.fileCreationTimeTextView)
+        val fileSizeTextView: TextView = view.findViewById(R.id.fileSizeTextView)
+
 
         // possibly add a "toDriveBtn" for sending survey to drive in the future
         val fileSendButton: ImageButton = view.findViewById(R.id.fileSendButton)
@@ -507,7 +516,7 @@ class FilesAdapter(
         val file = filesList[position]
         holder.fileNameTextView.text = file.nameWithoutExtension
         holder.fileCreationTimeTextView.text = getFileCreationTime(file)
-
+        holder.fileSizeTextView.text = getFormattedFileSize(file)
         holder.fileSendButton.setOnClickListener {
             onFileSendClick!!(file) // should never be null when this is called
         }
@@ -531,6 +540,23 @@ class FilesAdapter(
         } catch (e: Exception) {
             e.printStackTrace()
             null
+        }
+    }
+
+    private fun getFormattedFileSize(file: File): String {
+
+        val sizeInBytes = file.length() // File size in bytes
+
+        val kb = sizeInBytes / 1024.0
+        val mb = kb / 1024.0
+        val gb = mb / 1024.0
+
+        // takes the highest size category over 1
+        return when {
+            gb >= 1 -> String.format("%.1f GB", gb)
+            mb >= 1 -> String.format("%.1f MB", mb)
+            kb >= 1 -> String.format("%.1f KB", kb)
+            else -> "$sizeInBytes Bytes"
         }
     }
 
