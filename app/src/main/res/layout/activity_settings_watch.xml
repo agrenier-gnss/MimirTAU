@@ -97,7 +97,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="36dp"
-                android:text="Control"
+                android:text="Send"
                 app:layout_constraintBottom_toBottomOf="@+id/settings"
                 app:layout_constraintEnd_toStartOf="@+id/button_default"
                 app:layout_constraintHorizontal_bias="0.0"
