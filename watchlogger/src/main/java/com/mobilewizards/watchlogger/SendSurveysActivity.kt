@@ -33,6 +33,8 @@ import android.view.ViewGroup
 import android.widget.TextView
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import java.io.IOException
+import java.io.InputStream
 import java.security.MessageDigest
 
 
@@ -377,8 +379,7 @@ class SendSurveysActivity: Activity() {
         }
 
         // Generate the checksum for the file
-        val fileData = csvFile.readBytes()
-        val checksum = generateChecksum(fileData)
+        val checksum = generateChecksum(csvFile.inputStream())
         Log.d(TAG, "File checksum: $checksum")
 
         // Getting channelClient for sending the file
@@ -433,10 +434,23 @@ class SendSurveysActivity: Activity() {
 
     // generate a SHA-256 checksum for data corruption check between smartphone and watch file
     // transfer
-    private fun generateChecksum(data: ByteArray): String {
+    fun generateChecksum(inputStream: InputStream): String {
         val digest = MessageDigest.getInstance("SHA-256")
-        val hashBytes = digest.digest(data)
-        return hashBytes.joinToString("") { "%02x".format(it) }
+        val buffer = ByteArray(8192) // Adjust buffer size as needed
+        var bytesRead: Int
+
+        try {
+            while (inputStream.read(buffer).also { bytesRead = it } != -1) {
+                digest.update(buffer, 0, bytesRead)
+            }
+        } catch (e: IOException) {
+            // Handle exception
+        } finally {
+            inputStream.close()
+        }
+
+        val hashBytes = digest.digest()
+        return hashBytes.fold("") { str, it -> str + "%02x".format(it) }
     }
 
     private fun sendChecksumToPhone(checksum: String, nodeId: String, context: Context) {
