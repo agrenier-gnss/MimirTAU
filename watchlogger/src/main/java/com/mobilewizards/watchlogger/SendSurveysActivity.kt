@@ -394,8 +394,8 @@ class SendSurveysActivity: Activity() {
 
                         // will display that file was sent successfully even if the checksum or file name send fail
                         // TODO: maybe figure out a way to wait here for the async send code to finish before displaying success or failure
-                        sendFileNameToPhone(csvFile.name, nodeId, context)
                         sendChecksumToPhone(checksum, nodeId, context)
+                        sendFileNameToPhone(csvFile.name, nodeId, context)
                         fileSendOk = true
                         //fileSendSuccessful()
                     } else {
@@ -463,9 +463,7 @@ class SendSurveysActivity: Activity() {
             }
         }
 
-
     }
-
 
     private fun sendFileNameToPhone(fileName: String, nodeId: String, context: Context) {
         val messageClient = Wearable.getMessageClient(context)
@@ -480,9 +478,7 @@ class SendSurveysActivity: Activity() {
                 Log.e(TAG, "Error sending filename: ${task.exception}")
             }
         }
-
     }
-
 }
 
 // Separate class for RecyclerView items in RecyclerView activity_send_surveys.xml

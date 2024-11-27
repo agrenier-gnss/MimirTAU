@@ -97,7 +97,7 @@ class MainActivity: AppCompatActivity() {
     private val checksumReceiver = object: BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             if (intent.action == "ACTION_VERIFY_CHECKSUM") {
-                Log.w("verifyChecksum", "verify checksum broadcast")
+                Log.d("verifyChecksum", "verify checksum broadcast")
                 val receivedChecksum = intent.getStringExtra("checksum")
                 if (receivedChecksum != null) {
                     verifyChecksum(context, file, receivedChecksum)
@@ -197,14 +197,18 @@ class MainActivity: AppCompatActivity() {
                         if (receivedFileName != null) {
                             val originalFile = File(downloadsDir, receivedFileName)
                             val success = file.renameTo(originalFile)
-                            Log.d("fileRenameReceive", "rename success: $success")
-                            Log.d("fileRenameReceive", "Received file renamed to original name: ${receivedFileName}")
+                            if (success) {
+                                Log.d("fileRenameReceive", "rename success! File renamed to $receivedFileName")
+                                file = originalFile
+                            } else {
+                                Log.d("fileRenameReceive", "rename failure!")
+                            }
+
                             // setting back to null so that no 2 files are named the same on accident
                             receivedFileName = null
                         } else {
                             Log.w("fileRenameReceive", "No file name received! receivedFileName is null")
                         }
-
 
                     } else {
                         Log.e("channel", "File receival/saving failed: ${task.exception}")
@@ -292,7 +296,7 @@ class MainActivity: AppCompatActivity() {
             )
         }
 
-        // Register broadcoaster
+        // Register broadcaster
         registerReceiver(sensorCheckReceiver, IntentFilter("SENSOR_CHECK_UPDATE"), RECEIVER_NOT_EXPORTED)
     }
 
