@@ -394,8 +394,9 @@ class SendSurveysActivity: Activity() {
 
                         // will display that file was sent successfully even if the checksum or file name send fail
                         // TODO: maybe figure out a way to wait here for the async send code to finish before displaying success or failure
-                        sendChecksumToPhone(checksum, nodeId, context)
                         sendFileNameToPhone(csvFile.name, nodeId, context)
+                        sendChecksumToPhone(checksum, nodeId, context)
+
                         fileSendOk = true
                         //fileSendSuccessful()
                     } else {

@@ -194,21 +194,7 @@ class MainActivity: AppCompatActivity() {
                         (applicationContext as? GlobalNotification)?.showFileReceivedDialog(file.toString())
 
                         // Rename the file to the original name if it has been received
-                        if (receivedFileName != null) {
-                            val originalFile = File(downloadsDir, receivedFileName)
-                            val success = file.renameTo(originalFile)
-                            if (success) {
-                                Log.d("fileRenameReceive", "rename success! File renamed to $receivedFileName")
-                                file = originalFile
-                            } else {
-                                Log.d("fileRenameReceive", "rename failure!")
-                            }
 
-                            // setting back to null so that no 2 files are named the same on accident
-                            receivedFileName = null
-                        } else {
-                            Log.w("fileRenameReceive", "No file name received! receivedFileName is null")
-                        }
 
                     } else {
                         Log.e("channel", "File receival/saving failed: ${task.exception}")
@@ -441,45 +427,77 @@ class MainActivity: AppCompatActivity() {
         super.onDestroy()
     }
 
-    private fun verifyChecksum(context: Context, file: File, expectedChecksum: String) {
+    private fun verifyChecksum(context: Context, checkFile: File, expectedChecksum: String) {
         synchronized(fileAccessLock) {
             val rootView = (context as Activity).findViewById<View>(android.R.id.content)
             val snackbar = Snackbar.make(rootView, "Receiving file... Size: 0 KB", Snackbar.LENGTH_INDEFINITE)
             snackbar.show()
 
-            waitForFileTransfer(file, snackbar) { isTransferComplete ->
+            waitForFileTransfer(checkFile, snackbar) { isTransferComplete ->
 
                 if (isTransferComplete) {
-                    synchronized(fileAccessLock) {
-                        try {
-                            val fileBytes = file.readBytes()
-                            val fileChecksum = generateChecksum(fileBytes)
 
-                            Log.d("ChecksumListener", "Received log checksum: $fileChecksum")
+                    try {
+                        val fileBytes = checkFile.readBytes()
+                        val fileChecksum = generateChecksum(fileBytes)
 
-                            if (fileChecksum == expectedChecksum) {
-                                Log.d("verifyChecksum", "Checksum verification successful. File is intact.")
-                                Toast.makeText(context, "File integrity verified.", Toast.LENGTH_SHORT).show()
-                            } else {
-                                Log.e("verifyChecksum", "Checksum mismatch. File may be corrupted.")
-                                GlobalNotification().showAlertDialog(
-                                    context,
-                                    "File Corruption Detected",
-                                    "The file appears to be corrupted during transfer."
-                                )
-                            }
-                        } catch (e: Exception) {
-                            Log.e("verifyChecksum", "Error verifying checksum: ${e.message}")
+                        Log.d("ChecksumListener", "Received log checksum: $fileChecksum")
+
+                        if (fileChecksum == expectedChecksum) {
+                            Log.d("verifyChecksum", "Checksum verification successful. File is intact.")
+                            Toast.makeText(context, "File integrity verified.", Toast.LENGTH_SHORT).show()
+                        } else {
+                            Log.e("verifyChecksum", "Checksum mismatch. File may be corrupted.")
                             GlobalNotification().showAlertDialog(
-                                context, "Error", "An error occurred while verifying the file."
+                                context, "File Corruption Detected", "The file appears to be corrupted during transfer."
                             )
                         }
+                    } catch (e: Exception) {
+                        Log.e("verifyChecksum", "Error verifying checksum: ${e.message}")
+                        GlobalNotification().showAlertDialog(
+                            context, "Error", "An error occurred while verifying the file."
+                        )
                     }
+
+
+                    // NOTE: It's not necessarily optimal for the rename to be called from checksum verification function
+                    // but the rename must be done after the verification and transfer is fully complete to get around any
+                    // invalid file path errors
+
+                    // it would be optimal to have a way to synchronously wait for the file transfer to be complete
+                    // and only after that do the file checksum checking and only after that do the file renaming
+                    // all in a specific function
+                    renameFile(checkFile)
+
                 } else {
                     Log.w(
                         "verifyChecksum", "File transfer is still in progress; " + "checksum verification skipped."
                     )
                 }
+            }
+
+
+        }
+
+    }
+
+    private fun renameFile(renameFile: File) {
+        synchronized(fileAccessLock) {
+            if (receivedFileName != null) {
+                val downloadsDir = applicationContext.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)
+                val originalFile = File(downloadsDir, receivedFileName)
+                val success = renameFile.renameTo(originalFile)
+                if (success) {
+                    Log.d("fileRenameReceive", "rename success! File renamed to $receivedFileName")
+                    file = originalFile
+                } else {
+                    Log.d("fileRenameReceive", "rename failure!")
+                }
+
+                // setting back to null so that no 2 files are named the same on accident
+                receivedFileName = null
+            } else {
+                Log.w("fileRenameReceive", "No file name received! receivedFileName is null")
             }
         }
     }
