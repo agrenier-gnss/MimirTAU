@@ -1,14 +1,11 @@
 package com.mobilewizards.logging_app
 
-import android.annotation.SuppressLint
 import android.app.Activity
-import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
 import android.icu.text.SimpleDateFormat
 import android.os.Build
 import android.os.Bundle
-import android.os.Environment
 import android.provider.MediaStore
 import android.util.Log
 import android.widget.Button
@@ -18,15 +15,11 @@ import com.google.android.gms.wearable.ChannelClient
 import com.google.android.gms.wearable.Wearable
 import com.mobilewizards.logging_app.databinding.ActivitySendSurveysBinding
 import com.mobilewizards.watchlogger.WatchActivityHandler
-import java.io.BufferedReader
 import java.io.File
-import java.io.FileReader
 import java.nio.file.Files
 import java.nio.file.attribute.BasicFileAttributes
 import android.widget.ImageButton
 import android.app.AlertDialog
-import java.io.BufferedWriter
-import java.io.FileWriter
 
 
 import android.view.LayoutInflater
@@ -35,6 +28,9 @@ import android.view.ViewGroup
 import android.widget.TextView
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import java.io.FileOutputStream
+import java.io.IOException
+import java.io.InputStream
 import java.security.MessageDigest
 
 
@@ -238,10 +234,10 @@ class SendSurveysActivity: Activity() {
         val tempDir = applicationContext.cacheDir // app's cache directory
         val tempFile = File(tempDir, newFileName)
 
-        BufferedWriter(FileWriter(tempFile)).use { writer ->
+        tempFile.outputStream().buffered().use { outputStream ->
             // Helper function for writing lines to the file
             fun writeLine(line: String) {
-                writer.write("$line\n")
+                outputStream.write("$line\n".toByteArray())
             }
 
             writeLine("$COMMENT_START $originalName")
@@ -250,14 +246,18 @@ class SendSurveysActivity: Activity() {
             writeLine(COMMENT_START)
             writeLine("$COMMENT_START Version: ${BuildConfig.VERSION_CODE} Platform: ${Build.VERSION.RELEASE} Manufacturer: ${Build.MANUFACTURER} Model: ${Build.MODEL}")
             writeLine(COMMENT_START)
+            writeLine("")
 
-            file.bufferedReader().useLines { lines ->
-                writeLine("")
-                writeLine("$COMMENT_START ${file.name}")
-                lines.forEach { line ->
-                    writeLine(line)
+            // Read the input file in chunks and write to the output file
+            file.inputStream().buffered().use { inputStream ->
+                val buffer = ByteArray(8192) // 8 KB buffer size
+                var bytesRead: Int
+                while (inputStream.read(buffer).also { bytesRead = it } != -1) {
+                    outputStream.write(buffer, 0, bytesRead)
                 }
             }
+
+            outputStream.flush()
         }
 
         Log.d("File path", "temporary file created in ${tempFile.absolutePath}")
@@ -338,91 +338,106 @@ class SendSurveysActivity: Activity() {
     private fun sendCsvFileToPhone(tempFile: File, nodeId: String, context: Context) {
         Log.d(TAG, "in sendCsvFileToPhone ${tempFile.name}")
         // Checks if the file is found and read
-        try {
-            val bufferedReader = BufferedReader(FileReader(tempFile))
-            var line: String? = bufferedReader.readLine()
-            while (line != null) {
-                line = bufferedReader.readLine()
-            }
-            bufferedReader.close()
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
+//        try {
+//            val bufferedReader = BufferedReader(FileReader(csvFile))
+//            var line: String? = bufferedReader.readLine()
+//            while (line != null) {
+//                line = bufferedReader.readLine()
+//            }
+//            bufferedReader.close()
+//        } catch (e: Exception) {
+//            e.printStackTrace()
+//        }
 
         // Generate the checksum for the file
-        val fileData = tempFile.readBytes()
-        val checksum = generateChecksum(fileData)
+        val checksum = generateChecksum(tempFile.inputStream())
         Log.d(TAG, "File checksum: $checksum")
 
-        // Getting channelClient for sending the file
-        val channelClient = Wearable.getChannelClient(context)
-        val callback = object: ChannelClient.ChannelCallback() {
-            override fun onChannelOpened(channel: ChannelClient.Channel) {
+        // Create a temporary file to hold chunks (use temporary directory)
+        val cacheFile = File(context.cacheDir, "temp_chunked_file.csv")
 
-                Log.d(TAG, "onChannelOpened " + channel.nodeId)
-                // Send the CSV file to the phone and check if send was successful
-
-
-                channelClient.sendFile(channel, tempFile.toUri()).addOnCompleteListener { task ->
-                    if (task.isSuccessful) {
-
-                        // will display that file was sent successfully even if the checksum or file name send fail
-                        // but pausing the watchlogger for potentially a minute to see if everything was sent well
-                        // isn't really an option
-                        sendFileNameToPhone(tempFile.name, nodeId, context)
-                        sendChecksumToPhone(checksum, nodeId, context)
-
-                        fileSendOk = true
-                        //fileSendSuccessful()
-                    } else {
-                        Log.e(TAG, "Error with file sending " + task.exception.toString())
-                        fileSendOk = false
-                        //fileSendTerminated()
-
+        try {
+            // Stream file into temporary chunked file
+            FileOutputStream(cacheFile).use { outputStream ->
+                val buffer = ByteArray(262144) // 256 KB buffer
+                tempFile.inputStream().use { inputStream ->
+                    var bytesRead: Int
+                    while (inputStream.read(buffer).also { bytesRead = it } != -1) {
+                        outputStream.write(buffer, 0, bytesRead)
                     }
-                    WatchActivityHandler.fileSendStatus(fileSendOk)
-                    val openSendInfo = Intent(applicationContext, FileSendActivity::class.java)
-                    startActivity(openSendInfo)
-                    finish()
-                    channelClient.close(channel)
+                }
+            }
+            val channelClient = Wearable.getChannelClient(context)
+            val callback = object: ChannelClient.ChannelCallback() {
+                override fun onChannelOpened(channel: ChannelClient.Channel) {
+                    Log.d(TAG, "onChannelOpened ${channel.nodeId}")
+                    channelClient.sendFile(channel, cacheFile.toUri()).addOnCompleteListener { task ->
+                        if (task.isSuccessful) {
+
+                            // will display that file was sent successfully even if the checksum or file name send fail
+                            // but pausing the watchlogger for potentially a minute to see if everything was sent well
+                            // isn't really an option
+                            sendFileNameToPhone(tempFile.name, nodeId, context)
+                            sendChecksumToPhone(checksum, nodeId, context)
+                            fileSendOk = true
+
+                        } else {
+                            Log.e(TAG, "Error with file sending " + task.exception.toString())
+
+                            fileSendOk = false
+                        }
+                        WatchActivityHandler.fileSendStatus(fileSendOk)
+                        val openSendInfo = Intent(applicationContext, FileSendActivity::class.java)
+                        startActivity(openSendInfo)
+                        finish()
+                        channelClient.close(channel)
+                    }
                 }
 
+                override fun onChannelClosed(
+                    channel: ChannelClient.Channel, closeReason: Int, appSpecificErrorCode: Int
+                ) {
+                    Log.d(
+                        TAG, "Channel closed: nodeId=$nodeId, reason=$closeReason, errorCode=$appSpecificErrorCode"
+                    )
+                    Wearable.getChannelClient(applicationContext).close(channel)
+
+                    val cacheDeleted = cacheFile.delete()
+
+                    if (cacheDeleted) {
+                        Log.d(TAG, "Cache file deleted: ${tempFile.name}")
+                    } else {
+                        Log.w(TAG, "Failed to delete cache file: ${tempFile.name}")
+                    }
+
+                    val tempDeleted = tempFile.delete()
+
+                    if (tempDeleted) {
+                        Log.d(TAG, "Temporary file deleted: ${tempFile.name}")
+                    } else {
+                        Log.w(TAG, "Failed to delete temporary file: ${tempFile.name}")
+                    }
+                }
             }
 
-            override fun onChannelClosed(
-                channel: ChannelClient.Channel, closeReason: Int, appSpecificErrorCode: Int
-            ) {
-                Log.d(
-                    TAG, "Channel closed: nodeId=$nodeId, reason=$closeReason, errorCode=$appSpecificErrorCode"
-                )
-                Wearable.getChannelClient(applicationContext).close(channel)
-
-                val deleted = tempFile.delete()
-
-                if (deleted) {
-                    Log.d(TAG, "Temporary file deleted: ${tempFile.name}")
+            channelClient.registerChannelCallback(callback)
+            channelClient.openChannel(
+                nodeId, CSV_FILE_CHANNEL_PATH.toString()
+            ).addOnCompleteListener { result ->
+                Log.d(TAG, result.toString())
+                if (result.isSuccessful) {
+                    Log.d(TAG, "Channel opened: nodeId=$nodeId, path=$CSV_FILE_CHANNEL_PATH")
+                    callback.onChannelOpened(result.result)
                 } else {
-                    Log.w(TAG, "Failed to delete temporary file: ${tempFile.name}")
+                    Log.e(
+                        TAG, "Failed to open channel: nodeId=$nodeId, path=$CSV_FILE_CHANNEL_PATH"
+                    )
+                    channelClient.unregisterChannelCallback(callback)
+                    tempFile.delete()
                 }
-
-
             }
-        }
-
-        channelClient.registerChannelCallback(callback)
-        channelClient.openChannel(
-            nodeId, CSV_FILE_CHANNEL_PATH.toString()
-        ).addOnCompleteListener { result ->
-            Log.d(TAG, result.toString())
-            if (result.isSuccessful) {
-                Log.d(TAG, "Channel opened: nodeId=$nodeId, path=$CSV_FILE_CHANNEL_PATH")
-                callback.onChannelOpened(result.result)
-            } else {
-                Log.e(
-                    TAG, "Failed to open channel: nodeId=$nodeId, path=$CSV_FILE_CHANNEL_PATH"
-                )
-                channelClient.unregisterChannelCallback(callback)
-            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error while processing file: ${e.message}")
         }
     }
 
@@ -430,10 +445,23 @@ class SendSurveysActivity: Activity() {
 
     // generate a SHA-256 checksum for data corruption check between smartphone and watch file
     // transfer
-    private fun generateChecksum(data: ByteArray): String {
+    fun generateChecksum(inputStream: InputStream): String {
         val digest = MessageDigest.getInstance("SHA-256")
-        val hashBytes = digest.digest(data)
-        return hashBytes.joinToString("") { "%02x".format(it) }
+        val buffer = ByteArray(8192) // Adjust buffer size as needed
+        var bytesRead: Int
+
+        try {
+            while (inputStream.read(buffer).also { bytesRead = it } != -1) {
+                digest.update(buffer, 0, bytesRead)
+            }
+        } catch (e: IOException) {
+            // Handle exception
+        } finally {
+            inputStream.close()
+        }
+
+        val hashBytes = digest.digest()
+        return hashBytes.fold("") { str, it -> str + "%02x".format(it) }
     }
 
     private fun sendChecksumToPhone(checksum: String, nodeId: String, context: Context) {

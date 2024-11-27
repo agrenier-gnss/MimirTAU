@@ -35,6 +35,8 @@ import com.google.gson.reflect.TypeToken
 import com.mimir.sensors.LoggingService
 import com.mimir.sensors.SensorType
 import java.io.File
+import java.io.IOException
+import java.io.InputStream
 import java.io.Serializable
 import java.lang.reflect.Type
 import java.security.MessageDigest
@@ -436,10 +438,8 @@ class MainActivity: AppCompatActivity() {
             waitForFileTransfer(checkFile, snackbar) { isTransferComplete ->
 
                 if (isTransferComplete) {
-
                     try {
-                        val fileBytes = checkFile.readBytes()
-                        val fileChecksum = generateChecksum(fileBytes)
+                        val fileChecksum = generateChecksum(checkFile.inputStream())
 
                         Log.d("ChecksumListener", "Received log checksum: $fileChecksum")
 
@@ -539,10 +539,23 @@ class MainActivity: AppCompatActivity() {
         handler.post(checkRunnable)
     }
 
-    private fun generateChecksum(data: ByteArray): String {
+    fun generateChecksum(inputStream: InputStream): String {
         val digest = MessageDigest.getInstance("SHA-256")
-        val hashBytes = digest.digest(data)
-        return hashBytes.joinToString("") { "%02x".format(it) }
+        val buffer = ByteArray(8192) // Adjust buffer size as needed
+        var bytesRead: Int
+
+        try {
+            while (inputStream.read(buffer).also { bytesRead = it } != -1) {
+                digest.update(buffer, 0, bytesRead)
+            }
+        } catch (e: IOException) {
+            // Handle exception
+        } finally {
+            inputStream.close()
+        }
+
+        val hashBytes = digest.digest()
+        return hashBytes.fold("") { str, it -> str + "%02x".format(it) }
     }
 }
 // =================================================================================================
