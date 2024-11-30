@@ -1,6 +1,7 @@
 package com.mobilewizards.logging_app
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.app.Activity
 import android.app.Application
 import com.google.android.material.snackbar.Snackbar
@@ -57,6 +58,7 @@ class MainActivity: AppCompatActivity() {
     private lateinit var loggingText: TextView
     private lateinit var file: File
     private var receivedFileName: String? = null
+    private var receivedFileSize: Long? = null
 
     lateinit var loggingIntent: Intent
 
@@ -115,9 +117,21 @@ class MainActivity: AppCompatActivity() {
     private val fileNameReceiver = object: BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             Log.d("fileRenameReceive", "file rename broadcast")
-            if (intent.action == "RENAME_FILE") {
+            if (intent.action == "ACTION_RENAME_FILE") {
                 receivedFileName = intent.getStringExtra("filename")
                 Log.d("fileRenameReceive", "Original file name received: $receivedFileName")
+            }
+        }
+    }
+    // ---------------------------------------------------------------------------------------------
+
+    private val fileSizeReceiver = object: BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            Log.d("fileSizeReceive", "file size broadcast")
+            if (intent.action == "ACTION_SET_FILE_SIZE") {
+                val fileSizeString = intent.getStringExtra("fileSize")
+                receivedFileSize = fileSizeString?.trim()?.toLongOrNull()
+                Log.d("fileSizeReceive", "Original file size received: $receivedFileSize")
             }
         }
     }
@@ -170,7 +184,16 @@ class MainActivity: AppCompatActivity() {
 
         // Register the receiver to listen for filename broadcasts
         registerReceiver(
-            fileNameReceiver, IntentFilter("RENAME_FILE"), RECEIVER_EXPORTED // doesn't work with RECEIVER_NOT_EXPORTED
+            fileNameReceiver,
+            IntentFilter("ACTION_RENAME_FILE"),
+            RECEIVER_EXPORTED // doesn't work with RECEIVER_NOT_EXPORTED
+        )
+
+        // Register the receiver to listen for file size broadcasts
+        registerReceiver(
+            fileSizeReceiver,
+            IntentFilter("ACTION_SET_FILE_SIZE"),
+            RECEIVER_EXPORTED // doesn't work with RECEIVER_NOT_EXPORTED
         )
 
         this.checkPermissions()
@@ -432,6 +455,8 @@ class MainActivity: AppCompatActivity() {
     private fun verifyChecksum(context: Context, checkFile: File, expectedChecksum: String) {
         synchronized(fileAccessLock) {
             val rootView = (context as Activity).findViewById<View>(android.R.id.content)
+
+
             val snackbar = Snackbar.make(rootView, "Receiving file... Size: 0 KB", Snackbar.LENGTH_INDEFINITE)
             snackbar.show()
 
@@ -474,10 +499,13 @@ class MainActivity: AppCompatActivity() {
                         "verifyChecksum", "File transfer is still in progress; " + "checksum verification skipped."
                     )
                 }
+
+                // file size to null so that we cant have wrong file sizes
+                receivedFileSize = null
             }
 
-
         }
+
 
     }
 
@@ -502,13 +530,17 @@ class MainActivity: AppCompatActivity() {
         }
     }
 
+    @SuppressLint("DefaultLocale")
     private fun waitForFileTransfer(file: File, snackbar: Snackbar, callback: (Boolean) -> Unit) {
         val handler = Handler(Looper.getMainLooper())
         var lastSize = file.length()
         var unchangedSizeCount = 0
-
         val checkRunnable = object: Runnable {
+
             override fun run() {
+                // if receivedFileSize is null, we default to received file len
+                val totalSize: Long = receivedFileSize ?: file.length()
+
                 val currentSize = file.length()
                 if (currentSize == lastSize) {
                     unchangedSizeCount++
@@ -520,15 +552,19 @@ class MainActivity: AppCompatActivity() {
                         handler.postDelayed(this, 500)
                     }
                 } else {
+
                     lastSize = currentSize
                     unchangedSizeCount = 0
 
-                    val currentSizeMB = currentSize / (1024 * 1024)
-                    val totalSizeMB = file.length() / (1024 * 1024)
-                    //TODO: capture the file total size from watch or just dont use totalsize.
-                    // for better UX, it should show size changing as progress at least
+                    val currentSizeMB = (currentSize / (1024.0 * 1024.0))
+                    val totalSizeMB = (totalSize / (1024.0 * 1024.0))
 
-                    snackbar.setText("Receiving file... Size: ${currentSizeMB} MB / ${totalSizeMB} MB")
+                    val formattedCurrentSizeMB = String.format("%.1f", currentSizeMB)
+                    val formattedTotalSizeMB = String.format("%.1f", totalSizeMB)
+
+                    //TODO: for better UX, it should show size changing as progress at least
+
+                    snackbar.setText("Receiving file... Size: $formattedCurrentSizeMB MB / $formattedTotalSizeMB MB")
                         .setAction("Cancel", null).show()
 
                     handler.postDelayed(this, 500)
@@ -614,32 +650,46 @@ class MessageListenerService: WearableListenerService() {
 
     private val CHECKSUM_PATH = "/checksum"
     private val FILE_NAME_PATH = "/file-name"
+    private val FILE_SIZE_PATH = "/file-size"
 
     override fun onMessageReceived(messageEvent: MessageEvent) {
         val messageTag = messageEvent.path
         // Check if the message path tag math
-        if (messageTag == CHECKSUM_PATH) {
-            // Convert the byte array back to a String
-            val checksum = String(messageEvent.data)
-            Log.d("verifyChecksum", "Received checksum: $checksum")
-            // Broadcast the checksum to MainActivity
-            val intent = Intent("ACTION_VERIFY_CHECKSUM")
-            intent.putExtra("checksum", checksum)
-            sendBroadcast(intent)
 
+        when (messageTag) {
+            CHECKSUM_PATH -> {
+                // Convert the byte array back to a String
+                val checksum = String(messageEvent.data)
+                Log.d("verifyChecksum", "Received checksum: $checksum")
+                // Broadcast the checksum to MainActivity
+                val intent = Intent("ACTION_VERIFY_CHECKSUM")
+                intent.putExtra("checksum", checksum)
+                sendBroadcast(intent)
+            }
 
-        } else if (messageTag == FILE_NAME_PATH) {
-            // Convert the byte array back to a String
-            val filename = String(messageEvent.data)
-            Log.d("fileRenameReceive", "Received filename: $filename")
-            // Broadcast the checksum to MainActivity
-            val intent = Intent("RENAME_FILE")
-            intent.putExtra("filename", filename)
-            sendBroadcast(intent)
+            FILE_NAME_PATH -> {
+                // Convert the byte array back to a String
+                val filename = String(messageEvent.data)
+                Log.d("fileRenameReceive", "Received filename: $filename")
+                // Broadcast the file name to MainActivity
+                val intent = Intent("ACTION_RENAME_FILE")
+                intent.putExtra("filename", filename)
+                sendBroadcast(intent)
+            }
 
-        } else {
-            super.onMessageReceived(messageEvent)
+            FILE_SIZE_PATH -> {
+                // Convert the byte array back to a String
+                val fileSize = String(messageEvent.data)
+                Log.d("fileRenameReceive", "Received file size: $fileSize")
+                // Broadcast the file size to MainActivity
+                val intent = Intent("ACTION_SET_FILE_SIZE")
+                intent.putExtra("fileSize", fileSize)
+                sendBroadcast(intent)
+            }
+
+            else -> {
+                super.onMessageReceived(messageEvent)
+            }
         }
     }
-
 }
