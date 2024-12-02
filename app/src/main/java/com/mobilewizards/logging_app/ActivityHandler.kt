@@ -83,7 +83,7 @@ object ActivityHandler{
 
 //        val motionSensors = MotionSensorsHandler(context)
 //        val gnss = GnssHandler(context)
-//        val ble =  BLEHandler(context)
+//       val ble =  BLEHandler(context)
 //
 //        gnssSensor.add(gnss)
 //        imuSensor.add(motionSensors)
@@ -141,13 +141,13 @@ object ActivityHandler{
 //        if(IMUToggle || getToggle("Magnetometer") || getToggle("Barometer")){
 //            imuSensor[0].stopLogging()
 //        }
-//        if(BLEToggle){
-//            bleSensor[0].stopLogging()
-//        }
+        if(BLEToggle){
+            bleSensor[0].stopLogging()
+        }
 //
 //        gnssSensor.clear()
 //        imuSensor.clear()
-//        bleSensor.clear()
+        bleSensor.clear()
         isLogging = false
 
         sensorsHandler.stopLogging()

@@ -1,9 +1,15 @@
 package com.mobilewizards.logging_app
 
+import android.annotation.SuppressLint
+
 import android.app.Activity
 import android.content.Context
 import android.content.SharedPreferences
+import android.net.Uri
+import com.google.gson.JsonParser
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import android.widget.Button
 import android.widget.CompoundButton
@@ -14,9 +20,22 @@ import com.mimir.sensors.SensorType
 import com.mobilewizards.watchlogger.WatchActivityHandler
 import com.mobilewizards.logging_app.databinding.ActivitySettingsBinding
 import android.widget.Toast
+import androidx.annotation.RequiresApi
+import androidx.core.net.toUri
+import com.google.android.gms.wearable.ChannelClient
+import com.google.android.gms.wearable.Wearable
 import com.google.gson.Gson
+import com.google.gson.JsonParser.parseString
 import com.google.gson.reflect.TypeToken
+import org.json.JSONObject
+import java.io.BufferedReader
+import java.io.File
+import java.io.FileReader
+import java.io.IOException
+import java.io.InputStream
 import java.lang.reflect.Type
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 
 const val IDX_SWITCH = 0
 const val IDX_SEEKBAR = 1
@@ -29,7 +48,9 @@ class SettingsActivity: Activity() {
     private lateinit var sharedPreferences: SharedPreferences
     private val progressToFrequency = arrayOf(1, 5, 10, 50, 100, 200, 0)
     private lateinit var sensorsComponents: MutableMap<SensorType, MutableList<Any?>>
-
+    private val frequencyToProgress: Map<Int, Int> = progressToFrequency
+        .mapIndexed { index, frequency -> frequency to index }
+        .toMap()
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -37,7 +58,6 @@ class SettingsActivity: Activity() {
         setContentView(binding.root)
 
         // Initialisation values
-        // map of sensorString: (sensorEnabled, samplingFrequencyIndex)
         sharedPreferences = getSharedPreferences(sharedPrefName, Context.MODE_PRIVATE)
         if (!sharedPreferences.contains("GNSS")) {
             val editor: SharedPreferences.Editor = sharedPreferences.edit()
@@ -50,6 +70,7 @@ class SettingsActivity: Activity() {
             editor.putString("GSR", Gson().toJson(mutableListOf(false, 4)))
             editor.apply()
         }
+
 
         // Load Initialisation values from sharedPreferences to the sensor types
         val sensorsInit: Map<SensorType, MutableList<String>> = mapOf(
@@ -183,7 +204,125 @@ class SettingsActivity: Activity() {
         btnDefault.setOnClickListener {
             saveDefaultSettings()
         }
+
+        val channelClient = Wearable.getChannelClient(applicationContext)
+        channelClient.registerChannelCallback(object : ChannelClient.ChannelCallback() {
+            override fun onChannelOpened(channel: ChannelClient.Channel) {
+                val shortPath = "/storage/emulated/0/Download/setting_app_received_${
+                    LocalDateTime.now().format(
+                        DateTimeFormatter.ofPattern("yyyyMMdd_HHmmssSSS")
+                    )
+                }"
+
+                val filePath = "file://${shortPath}"
+
+                val receiveTask = channelClient.receiveFile(channel, filePath.toUri(), false)
+                receiveTask.addOnCompleteListener { task ->
+                    if (task.isSuccessful) {
+                        Log.d("channel", shortPath)
+                        Toast.makeText(applicationContext, "succeed", Toast.LENGTH_SHORT).show()
+                        // Add a slight delay before reading
+                        Handler(Looper.getMainLooper()).postDelayed({
+                            extractJsonDataFromCsv(shortPath)
+                        }, 500)
+
+                    }
+                }
+            }
+        })
     }
+
+
+    fun reflectJsonDataToWatch(jsonData: JSONObject) {
+        val keys = jsonData.keys();
+        while (keys.hasNext()) {
+            val key: String = keys.next()
+            var senorKey:SensorType = SensorType.TYPE_GNSS
+            when (key) {
+                "GNSS" -> sensorsComponents[SensorType.TYPE_GNSS]?.let {
+                    (it[0] as Switch).isChecked = jsonData.getJSONObject(key).getBoolean("switch")
+                }
+                "IMU" -> senorKey = SensorType.TYPE_IMU
+                "PSR" -> senorKey = SensorType.TYPE_PRESSURE
+                "STEPS" -> senorKey = SensorType.TYPE_STEPS
+                "ECG" -> senorKey = SensorType.TYPE_SPECIFIC_ECG
+                "PPG" -> senorKey = SensorType.TYPE_SPECIFIC_PPG
+                "GSR" -> senorKey = SensorType.TYPE_SPECIFIC_GSR
+            }
+            if(senorKey != SensorType.TYPE_GNSS){
+                sensorsComponents[senorKey]?.let {
+                    val processValue = jsonData.getJSONObject(key).getInt("value")
+                    Log.d("shared1",processValue.toString())
+                    Log.d("shared1",frequencyToProgress[processValue].toString())
+                    (it[0] as Switch).isChecked = jsonData.getJSONObject(key).getBoolean("switch")
+                    (it[1] as SeekBar).isEnabled = jsonData.getJSONObject(key).getBoolean("switch")
+                    (it[1] as SeekBar).progress = frequencyToProgress[processValue]?:0
+                    (it[2] as TextView).text = "${processValue.toString()} Hz"
+                }
+            }
+
+
+        }
+
+    }
+
+    fun extractJsonDataFromCsv(filePath: String): JSONObject? {
+        Thread.sleep(100)
+        val jsonTag = "JSON_DATA_START"
+        val file = File(filePath)
+        var jsonData: JSONObject? = null
+
+        if (!file.exists()) {
+            Log.e("channel", "File does not exist")
+            return null
+        }
+
+
+        val fileContents = try {
+            BufferedReader(FileReader(file)).use { it.readText() }
+        } catch (e: IOException) {
+            Log.e("channel", "Error reading file: ${e.message}")
+            e.printStackTrace()
+            return null
+
+        }
+
+        Log.d("channel", "File contents: $fileContents")
+
+        if (fileContents.isBlank()) {
+            Log.e("channel", "File is empty or could not be read")
+
+        } else {
+            val jsonStartIndex = fileContents.indexOf(jsonTag)
+            if (jsonStartIndex == -1) {
+                Log.e("channel", "JSON_DATA_START tag not found in file")
+
+            } else {
+                val jsonDataString =
+                    fileContents.substring(jsonStartIndex + "JSON_DATA_START".length)
+                Log.e("channel", jsonDataString)
+                try {
+                    jsonData = JSONObject(jsonDataString)
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+        }
+        if (file.delete()) {
+            Log.d("channel", "File deleted successfully")
+        } else {
+            Log.e("channel", "Failed to delete file")
+        }
+        jsonData?.let { reflectJsonDataToWatch(it) }
+        return jsonData
+    }
+
+
+
+
+
+
+
 
     // ---------------------------------------------------------------------------------------------
     private fun loadSharedPreference(key: String): MutableList<String> {
@@ -238,8 +377,7 @@ class SettingsActivity: Activity() {
                 editor.putString(
                     spkey, Gson().toJson(
                         mutableListOf(
-                            (entry.value[IDX_SWITCH] as? Switch)?.isChecked as Boolean, 0
-                        )
+                            (entry.value[IDX_SWITCH] as? Switch)?.isChecked as Boolean, 0)
                     )
                 )
             } else {
