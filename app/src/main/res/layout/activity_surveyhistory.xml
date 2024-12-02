@@ -6,14 +6,27 @@
     android:layout_height="match_parent"
     android:background="@color/light_gray"
     android:id="@+id/survey_layout">
-
+    <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+        android:layout_width="45dp"
+        android:layout_height="45dp"
+        android:layout_marginStart="20dp"
+        android:layout_marginTop="8dp"
+        android:id="@+id/button_back"
+        android:background="@drawable/ic_back"
+        android:clickable="true"
+        android:focusable="true"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
+    </FrameLayout>
     <ScrollView
         android:id="@+id/scroll_id"
         android:layout_width="match_parent"
         android:layout_height="0dp"
+        android:layout_marginTop="55dp"
         app:layout_constraintLeft_toLeftOf="parent"
         app:layout_constraintRight_toRightOf="parent"
         app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/button_back"
         tools:ignore="NotSibling">
 
         <androidx.constraintlayout.widget.ConstraintLayout
@@ -25,7 +38,7 @@
                 android:layout_width="241sp"
                 android:layout_height="40sp"
                 android:layout_marginLeft="13dp"
-                android:layout_marginTop="80dp"
+                android:layout_marginTop="10dp"
                 android:text="Previous surveys"
                 android:textColor="@color/white"
                 android:textSize="32sp"
@@ -37,7 +50,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:orientation="vertical"
-                android:layout_marginTop="137dp"
+                android:layout_marginTop="40dp"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintHorizontal_bias="1.0"
                 app:layout_constraintStart_toStartOf="parent"
