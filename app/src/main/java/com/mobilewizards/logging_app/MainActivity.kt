@@ -4,6 +4,8 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.app.Application
+import android.view.LayoutInflater
+import android.widget.ProgressBar
 import com.google.android.material.snackbar.Snackbar
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -19,6 +21,7 @@ import android.os.Looper
 import android.os.SystemClock
 import android.util.Log
 import android.view.View
+import android.view.ViewGroup
 import android.widget.Button
 import android.widget.TextView
 import android.widget.Toast
@@ -460,7 +463,7 @@ class MainActivity: AppCompatActivity() {
             val snackbar = Snackbar.make(rootView, "Receiving file... Size: 0 KB", Snackbar.LENGTH_INDEFINITE)
             snackbar.show()
 
-            waitForFileTransfer(checkFile, snackbar) { isTransferComplete ->
+            waitForFileTransfer(checkFile, snackbar, this) { isTransferComplete ->
 
                 if (isTransferComplete) {
                     try {
@@ -531,10 +534,30 @@ class MainActivity: AppCompatActivity() {
     }
 
     @SuppressLint("DefaultLocale")
-    private fun waitForFileTransfer(file: File, snackbar: Snackbar, callback: (Boolean) -> Unit) {
+    private fun waitForFileTransfer(file: File, snackbar: Snackbar, context: Context, callback: (Boolean) -> Unit) {
         val handler = Handler(Looper.getMainLooper())
         var lastSize = file.length()
         var unchangedSizeCount = 0
+
+        // progress bar for the file receive
+        val customView = LayoutInflater.from(context).inflate(R.layout.custom_snackbar_progress, null)
+
+        val progressBar = customView.findViewById<ProgressBar>(R.id.snackbar_progress_bar)
+        val progressText = customView.findViewById<TextView>(R.id.snackbar_text)
+
+        val snackbarView = snackbar.view
+
+        val snackbarLayout = snackbarView as? ViewGroup
+
+        if (snackbarLayout == null) {
+            Log.e("SnackbarError", "Snackbar view is not a ViewGroup. Cannot proceed with customization.")
+            return
+        }
+
+        snackbarLayout.removeAllViews()
+        snackbarLayout.addView(customView)
+        snackbar.show()
+
         val checkRunnable = object: Runnable {
 
             override fun run() {
@@ -556,16 +579,11 @@ class MainActivity: AppCompatActivity() {
                     lastSize = currentSize
                     unchangedSizeCount = 0
 
-                    val currentSizeMB = (currentSize / (1024.0 * 1024.0))
-                    val totalSizeMB = (totalSize / (1024.0 * 1024.0))
+                    progressBar.progress = ((currentSize.toDouble() / totalSize) * 100).toInt()
+                    val currentSizeMB = currentSize / (1024.0 * 1024.0)
+                    val totalSizeMB = totalSize / (1024.0 * 1024.0)
 
-                    val formattedCurrentSizeMB = String.format("%.1f", currentSizeMB)
-                    val formattedTotalSizeMB = String.format("%.1f", totalSizeMB)
-
-                    //TODO: for better UX, it should show size changing as progress at least
-
-                    snackbar.setText("Receiving file... Size: $formattedCurrentSizeMB MB / $formattedTotalSizeMB MB")
-                        .setAction("Cancel", null).show()
+                    progressText.text = String.format("Receiving file... %.1f MB / %.1f MB", currentSizeMB, totalSizeMB)
 
                     handler.postDelayed(this, 500)
                 }
