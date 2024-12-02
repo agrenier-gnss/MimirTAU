@@ -1,6 +1,7 @@
 package com.mobilewizards.logging_app
 import android.os.Bundle
 import android.widget.Button
+import android.widget.FrameLayout
 import androidx.appcompat.app.AppCompatActivity
 import androidx.viewpager.widget.ViewPager
 import com.google.android.material.tabs.TabLayout
@@ -17,7 +18,7 @@ class SettingsActivity : AppCompatActivity(),
         supportActionBar?.hide()
         val tabLayout = findViewById<TabLayout>(R.id.tab_layout)
         val viewPager = findViewById<ViewPager>(R.id.pager)
-        val goBackButton = findViewById<Button>(R.id.button_back)
+        val goBackButton = findViewById<FrameLayout>(R.id.button_back)
         val adapter = MyPagerAdapter(supportFragmentManager)
         viewPager.adapter = adapter
 
