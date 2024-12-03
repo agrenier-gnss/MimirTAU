@@ -205,26 +205,6 @@ class SendSurveysActivity: Activity() {
 
     // =============================================================================================
 
-    private fun fileSendSuccessful() {
-        fileSendOk = true
-        WatchActivityHandler.fileSendStatus(fileSendOk)
-        val openSendInfo = Intent(applicationContext, FileSendActivity::class.java)
-        startActivity(openSendInfo)
-        finish()
-    }
-
-    // =============================================================================================
-
-    private fun fileSendTerminated() {
-        fileSendOk = false
-        WatchActivityHandler.fileSendStatus(fileSendOk)
-        val openSendInfo = Intent(applicationContext, FileSendActivity::class.java)
-        startActivity(openSendInfo)
-        finish()
-    }
-
-    // =============================================================================================
-
 
     private fun generateCsvFile(file: File): File {
         // generates a CSV file in a temporary directory and returns the File object
@@ -371,6 +351,11 @@ class SendSurveysActivity: Activity() {
             val callback = object: ChannelClient.ChannelCallback() {
                 override fun onChannelOpened(channel: ChannelClient.Channel) {
                     Log.d(TAG, "onChannelOpened ${channel.nodeId}")
+                    val fileByteSize = tempFile.length().toString()
+
+                    // sending file size before starting to send file
+                    sendFileSizeToPhone(fileByteSize, nodeId, context)
+
                     channelClient.sendFile(channel, cacheFile.toUri()).addOnCompleteListener { task ->
                         if (task.isSuccessful) {
 
@@ -485,11 +470,23 @@ class SendSurveysActivity: Activity() {
 
         messageClient.sendMessage(nodeId, filenamePath, fileName.toByteArray()).addOnCompleteListener { task ->
             if (task.isSuccessful) {
-
                 Log.d(TAG, "File name sent successfully. Filename: $fileName")
-
             } else {
                 Log.e(TAG, "Error sending filename: ${task.exception}")
+            }
+        }
+    }
+
+
+    private fun sendFileSizeToPhone(fileSize: String, nodeId: String, context: Context) {
+        val messageClient = Wearable.getMessageClient(context)
+        val filenamePath = "/file-size" // message identifier tag
+
+        messageClient.sendMessage(nodeId, filenamePath, fileSize.toByteArray()).addOnCompleteListener { task ->
+            if (task.isSuccessful) {
+                Log.d(TAG, "File size sent successfully. File size: $fileSize")
+            } else {
+                Log.e(TAG, "Error sending file size: ${task.exception}")
             }
         }
     }
