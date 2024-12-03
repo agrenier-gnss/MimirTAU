@@ -1,28 +1,29 @@
 package com.mobilewizards.logging_app
 
 import android.Manifest
-import android.annotation.SuppressLint
 import android.app.Activity
 import android.app.Application
-import com.google.android.material.snackbar.Snackbar
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
-import androidx.appcompat.app.AppCompatActivity
+import android.graphics.Color
+import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
 import android.os.Environment
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
 import android.util.Log
+import android.view.LayoutInflater
 import android.view.View
 import android.widget.Button
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
+import androidx.appcompat.app.AppCompatActivity
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -31,6 +32,7 @@ import com.google.android.gms.wearable.ChannelClient
 import com.google.android.gms.wearable.MessageEvent
 import com.google.android.gms.wearable.Wearable
 import com.google.android.gms.wearable.WearableListenerService
+import com.google.android.material.snackbar.Snackbar
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import com.mimir.sensors.LoggingService
@@ -43,6 +45,7 @@ import java.lang.reflect.Type
 import java.security.MessageDigest
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
+
 
 // =================================================================================================
 
@@ -455,8 +458,6 @@ class MainActivity: AppCompatActivity() {
     private fun verifyChecksum(context: Context, checkFile: File, expectedChecksum: String) {
         synchronized(fileAccessLock) {
             val rootView = (context as Activity).findViewById<View>(android.R.id.content)
-
-
             val snackbar = Snackbar.make(rootView, "Receiving file... Size: 0 KB", Snackbar.LENGTH_INDEFINITE)
             snackbar.show()
 
@@ -530,7 +531,6 @@ class MainActivity: AppCompatActivity() {
         }
     }
 
-    @SuppressLint("DefaultLocale")
     private fun waitForFileTransfer(file: File, snackbar: Snackbar, callback: (Boolean) -> Unit) {
         val handler = Handler(Looper.getMainLooper())
         var lastSize = file.length()
@@ -629,9 +629,26 @@ class GlobalNotification: Application() {
 
     fun showFileReceivedDialog(filePath: String) {
         currentActivity?.let {
-            android.app.AlertDialog.Builder(it).setTitle("File Received")
-                .setMessage("The file has been saved at: $filePath")
-                .setPositiveButton("OK") { dialog, _ -> dialog.dismiss() }.create().show()
+
+
+            val inflater = LayoutInflater.from(it)
+            val dialogView = inflater.inflate(R.layout.custom_dialog, null)
+
+            val builder = AlertDialog.Builder(it)
+            builder.setView(dialogView as View)
+
+            val dialog = builder.create()
+            dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+            val title = dialogView.findViewById<TextView>(R.id.dialog_title)
+            val message = dialogView.findViewById<TextView>(R.id.dialog_message)
+            val okBtn = dialogView.findViewById<Button>(R.id.positiveButton)
+            okBtn.setOnClickListener {
+                dialog.dismiss()
+            }
+            title.text = "File Received"
+            message.text = "The file has been saved at: $filePath"
+            dialog.show()
+
         }
     }
 

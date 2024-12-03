@@ -5,20 +5,18 @@
     android:layout_width="match_parent"
     android:background="@color/light_gray"
     android:layout_height="match_parent">
-
-
-    <Button
-        android:id="@+id/button_back"
+    <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
         android:layout_width="45dp"
         android:layout_height="45dp"
         android:layout_marginStart="20dp"
         android:layout_marginTop="8dp"
-        android:background="@drawable/ic_go_back"
-        android:contentDescription="goBack"
+        android:id="@+id/button_back"
+        android:background="@drawable/ic_back"
+        android:clickable="true"
+        android:focusable="true"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        tools:ignore="MissingConstraints" />
-
+        app:layout_constraintTop_toTopOf="parent">
+    </FrameLayout>
 
     <androidx.viewpager.widget.ViewPager
         android:id="@+id/pager"
@@ -35,6 +33,7 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"/>
+        app:tabIndicatorColor="#FFFFFF" />
 </androidx.constraintlayout.widget.ConstraintLayout>
