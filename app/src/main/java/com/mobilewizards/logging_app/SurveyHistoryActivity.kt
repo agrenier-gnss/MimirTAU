@@ -2,24 +2,30 @@ package com.mobilewizards.logging_app
 
 import android.annotation.SuppressLint
 import android.content.Intent
+import android.graphics.Color
+import android.graphics.drawable.ColorDrawable
 import android.net.Uri
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.os.Environment
 import android.os.StrictMode
 import android.util.Log
+import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Button
+import android.widget.FrameLayout
 import android.widget.TableLayout
 import android.widget.TextView
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.widget.AppCompatImageButton
 import androidx.core.content.ContextCompat
 import com.google.android.material.snackbar.Snackbar
 import java.io.File
 
 class SurveyHistoryActivity : AppCompatActivity() {
-    @SuppressLint("ClickableViewAccessibility")
+    @SuppressLint("ClickableViewAccessibility", "MissingInflatedId")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_surveyhistory)
@@ -64,8 +70,9 @@ class SurveyHistoryActivity : AppCompatActivity() {
                 else -> false
             }
         }
-
-
+        val goBackButton = findViewById<FrameLayout>(R.id.button_back)
+        goBackButton.setOnClickListener {
+            onBackPressedDispatcher.onBackPressed();}
     }
 
     @SuppressLint("SetTextI18n", "QueryPermissionsNeeded")
@@ -90,9 +97,10 @@ class SurveyHistoryActivity : AppCompatActivity() {
             val fileLocation = tableLayout.findViewById<TextView>(R.id.surveyLocation)
             fileLocation.text = file.canonicalPath.toString()
 
-            fileLocation.setOnClickListener {
-                try {
+            tableLayout.setOnClickListener {
 
+
+                try {
                     val builder = StrictMode.VmPolicy.Builder()
                     StrictMode.setVmPolicy(builder.build())
 
@@ -102,14 +110,23 @@ class SurveyHistoryActivity : AppCompatActivity() {
                     intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
                     startActivity(intent)
                 } catch (e: Exception) {
-                    Log.e("Error in opening of file", e.toString())
-                    val view = findViewById<View>(android.R.id.content)
-                    val snackbar = Snackbar.make(view, "Error in opening of file", Snackbar.LENGTH_LONG)
-                    snackbar.setAction("Close") {
-                        snackbar.dismiss()
+                    val inflater = LayoutInflater.from(this)
+                    val dialogView = inflater.inflate(R.layout.custom_dialog, null)
+
+                    val builder = AlertDialog.Builder(this)
+                    builder.setView(dialogView as View)
+
+                    val dialog = builder.create()
+                    dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+                    val title = dialogView.findViewById<TextView>(R.id.dialog_title)
+                    val message = dialogView.findViewById<TextView>(R.id.dialog_message)
+                    val okBtn = dialogView.findViewById<Button>(R.id.positiveButton)
+                    okBtn.setOnClickListener {
+                        dialog.dismiss()
                     }
-                    snackbar.view.setBackgroundColor(ContextCompat.getColor(view.context, R.color.red))
-                    snackbar.show()
+                    title.text = "File Corruption"
+                    message.text = "Error in opening of file: ${file.name}"
+                    dialog.show()
                 }
             }
 
