@@ -11,6 +11,7 @@ import android.util.Log
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
+import android.widget.FrameLayout
 import android.widget.TableLayout
 import android.widget.TextView
 import androidx.appcompat.widget.AppCompatImageButton
@@ -19,7 +20,7 @@ import com.google.android.material.snackbar.Snackbar
 import java.io.File
 
 class SurveyHistoryActivity : AppCompatActivity() {
-    @SuppressLint("ClickableViewAccessibility")
+    @SuppressLint("ClickableViewAccessibility", "MissingInflatedId")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_surveyhistory)
@@ -64,8 +65,10 @@ class SurveyHistoryActivity : AppCompatActivity() {
                 else -> false
             }
         }
-
-
+        val goBackButton = findViewById<FrameLayout>(R.id.button_back)
+        goBackButton.setOnClickListener {
+            Log.d("test","22")
+            onBackPressedDispatcher.onBackPressed();}
     }
 
     @SuppressLint("SetTextI18n", "QueryPermissionsNeeded")
