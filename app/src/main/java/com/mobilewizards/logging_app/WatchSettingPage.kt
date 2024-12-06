@@ -221,8 +221,8 @@ class WatchSettingPage: Fragment() {
                 Log.d(TAG, "no nodes found")
                 Toast.makeText(requireContext(), "Watch not connected", Toast.LENGTH_SHORT).show()
             } else {
-                var settingsFile = generateSettingsFile()
-                sendSettingsCsv(settingsFile, connectedNode, requireContext())
+                //var settingsFile = generateSettingsFile()
+                sendSettingsJson(connectedNode, requireContext())
             }
         }
     }
@@ -254,27 +254,8 @@ class WatchSettingPage: Fragment() {
             writeLine("$COMMENT_START Version: ${BuildConfig.VERSION_CODE} Platform: ${Build.VERSION.RELEASE} Manufacturer: ${Build.MANUFACTURER} Model: ${Build.MODEL}")
             writeLine(COMMENT_START)
             writeLine("$COMMENT_START JSON_DATA_START")
-            val jsonData = JSONObject()
-            sensorsComponents.forEach { entry ->
-                val mkey: SensorType = SensorType.TYPE_GNSS
-                when (entry.key) {
 
-                    "GNSS" -> jsonData.put("GNSS", JSONObject().apply {
-                        put("switch", (entry.value[IDX_SWITCH] as? SwitchCompat)?.isChecked as Boolean)
-                    })
-
-                    else -> jsonData.put(entry.key, JSONObject().apply {
-                        put("switch", (entry.value[IDX_SWITCH] as? SwitchCompat)?.isChecked as Boolean)
-                        put("value", progressToFrequency[(entry.value[IDX_SEEKBAR] as? SeekBar)?.progress as Int])
-                    })
-                }/*
-                                        // Added health sensor for LoggingService
-                                        ActivityHandler.sensorsSelected[SensorType.TYPE_SPECIFIC_ECG] = Pair(false, 0)
-                                        ActivityHandler.sensorsSelected[SensorType.TYPE_SPECIFIC_PPG] = Pair(false, 0)
-                                        ActivityHandler.sensorsSelected[SensorType.TYPE_SPECIFIC_GSR] = Pair(false, 0)*/
-            }
-
-            writeLine(jsonData.toString())
+            writeLine(generateSettingsJson())
             outputStream.flush()
 
         }
@@ -309,55 +290,45 @@ class WatchSettingPage: Fragment() {
         Toast.makeText(requireContext(), "failed", Toast.LENGTH_SHORT).show()
     }
 
-    private fun sendSettingsCsv(csvFile: File, nodeId: String, context: Context) {
-        Log.d(TAG, "in sendSettingsCsv " + csvFile.name)
+    private fun generateSettingsJson(): String {
+        val jsonData = JSONObject()
+        sensorsComponents.forEach { entry ->
+            val mkey: SensorType = SensorType.TYPE_GNSS
+            when (entry.key) {
 
+                "GNSS" -> jsonData.put("GNSS", JSONObject().apply {
+                    put("switch", (entry.value[IDX_SWITCH] as? SwitchCompat)?.isChecked as Boolean)
+                })
 
-        // Getting channelClient for sending the file
-        val channelClient = Wearable.getChannelClient(context)
-        val callback = object: ChannelClient.ChannelCallback() {
-            override fun onChannelOpened(channel: ChannelClient.Channel) {
-                Log.d(TAG, "onChannelOpened " + channel.nodeId)
-                // Send the CSV file to the phone
-                channelClient.sendFile(channel, csvFile.toUri()).addOnCompleteListener { task ->
-                    if (task.isSuccessful) {
-                        AppActivityHandler.fileSendStatus(true)
-                        fileSendSuccessful()
-                        channelClient.close(channel)
-                    } else {
-                        Log.e(TAG, "Error with file sending " + task.exception.toString())
-                        AppActivityHandler.fileSendStatus(false)
-                        fileSendTerminated()
-                        channelClient.close(channel)
-                    }
+                else -> jsonData.put(entry.key, JSONObject().apply {
+                    put("switch", (entry.value[IDX_SWITCH] as? SwitchCompat)?.isChecked as Boolean)
+                    put("value", progressToFrequency[(entry.value[IDX_SEEKBAR] as? SeekBar)?.progress as Int])
+                })
+            }/*
+                                        // Added health sensor for LoggingService
+                                        ActivityHandler.sensorsSelected[SensorType.TYPE_SPECIFIC_ECG] = Pair(false, 0)
+                                        ActivityHandler.sensorsSelected[SensorType.TYPE_SPECIFIC_PPG] = Pair(false, 0)
+                                        ActivityHandler.sensorsSelected[SensorType.TYPE_SPECIFIC_GSR] = Pair(false, 0)*/
+        }
+
+        return jsonData.toString()
+    }
+
+    private fun sendSettingsJson(nodeId: String, context: Context) {
+        val TAG = "SendSettings"
+        val messageClient = Wearable.getMessageClient(context)
+        val watchSettingsPath = "/watch_settings" // Message identifier tag
+        val settingsJsonString = generateSettingsJson()
+
+        // TODO: add a notification that pops up and informs the user that the send was successful
+        messageClient.sendMessage(nodeId, watchSettingsPath, settingsJsonString.toByteArray())
+            .addOnCompleteListener { task ->
+                if (task.isSuccessful) {
+                    Log.d(TAG, "Settings JSON sent successfully. Value: $settingsJsonString")
+                } else {
+                    Log.e(TAG, "Error sending settings JSON: ${task.exception}")
                 }
             }
-
-            override fun onChannelClosed(
-                channel: ChannelClient.Channel, closeReason: Int, appSpecificErrorCode: Int
-            ) {
-                Log.d(
-                    TAG, "Channel closed: nodeId=$nodeId, reason=$closeReason, errorCode=$appSpecificErrorCode"
-                )
-                Wearable.getChannelClient(requireContext()).close(channel)
-            }
-        }
-
-        channelClient.registerChannelCallback(callback)
-        channelClient.openChannel(
-            nodeId, CSV_FILE_CHANNEL_PATH.toString()
-        ).addOnCompleteListener { result ->
-            Log.d(TAG, result.toString())
-            if (result.isSuccessful) {
-                Log.d(TAG, "Channel opened: nodeId=$nodeId, path=$CSV_FILE_CHANNEL_PATH")
-                callback.onChannelOpened(result.result)
-            } else {
-                Log.e(
-                    TAG, "Failed to open channel: nodeId=$nodeId, path=$CSV_FILE_CHANNEL_PATH"
-                )
-                channelClient.unregisterChannelCallback(callback)
-            }
-        }
     }
 
     // ---------------------------------------------------------------------------------------------
@@ -404,8 +375,6 @@ class WatchSettingPage: Fragment() {
             }
         }
     }
-
-    // ---------------------------------------------------------------------------------------------
 
 
     // ---------------------------------------------------------------------------------------------
