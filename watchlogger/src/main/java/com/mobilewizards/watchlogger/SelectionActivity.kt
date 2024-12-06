@@ -15,6 +15,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.IntentFilter
 import android.widget.Toast
+import org.json.JSONObject
 
 
 class SelectionActivity: Activity() {
@@ -25,15 +26,19 @@ class SelectionActivity: Activity() {
 
     // ---------------------------------------------------------------------------------------------
 
-    // BroadcastReceiver to handle settings JSON sent from the phone
+    //BroadcastReceiver to handle settings JSON sent from the phone
     private val settingsJsonReceiver = object: BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             if (intent.action == "ACTION_RECEIVE_SETTINGS_JSON") {
                 val settingsJson = intent.getStringExtra("settings_json")
-                Log.d("SelectionActivity", "Settings JSON received: $settingsJson")
 
                 Toast.makeText(context, "Settings received", Toast.LENGTH_SHORT).show()
-                processSettingsJson(settingsJson)
+
+                settingsJson?.let {
+                    val jsonObject = JSONObject(it)
+                    Log.d("SelectionActivity", "Sending settings to be processed in settingsActivity")
+                    SettingsActivity.processSettingsJson(context, jsonObject)
+                }
             }
         }
     }
@@ -125,12 +130,10 @@ class SelectionActivity: Activity() {
         }
     }
 
-    // =============================================================================================
-    private fun processSettingsJson(json: String?) {
-        Log.d("SelectionActivity", "Processing settings JSON: $json")
 
-    }
 }
+
+// =============================================================================================
 
 class WatchMessageListenerService: WearableListenerService() {
 

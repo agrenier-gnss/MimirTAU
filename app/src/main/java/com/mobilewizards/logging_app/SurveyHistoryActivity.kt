@@ -24,7 +24,7 @@ import androidx.core.content.ContextCompat
 import com.google.android.material.snackbar.Snackbar
 import java.io.File
 
-class SurveyHistoryActivity : AppCompatActivity() {
+class SurveyHistoryActivity: AppCompatActivity() {
     @SuppressLint("ClickableViewAccessibility", "MissingInflatedId")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -42,6 +42,8 @@ class SurveyHistoryActivity : AppCompatActivity() {
         var y1 = 0f
         var x2 = 0f
         var y2 = 0f
+
+        // TODO: Fix scrolling, it is very inconsistent and feels kind of bad
         findViewById<View>(R.id.scroll_id).setOnTouchListener { _, touchEvent ->
             when (touchEvent.action) {
                 MotionEvent.ACTION_DOWN -> {
@@ -49,6 +51,7 @@ class SurveyHistoryActivity : AppCompatActivity() {
                     y1 = touchEvent.y
                     true
                 }
+
                 MotionEvent.ACTION_UP -> {
                     x2 = touchEvent.x
                     y2 = touchEvent.y
@@ -67,12 +70,14 @@ class SurveyHistoryActivity : AppCompatActivity() {
                     }
                     false
                 }
+
                 else -> false
             }
         }
         val goBackButton = findViewById<FrameLayout>(R.id.button_back)
         goBackButton.setOnClickListener {
-            onBackPressedDispatcher.onBackPressed();}
+            onBackPressedDispatcher.onBackPressed();
+        }
     }
 
     @SuppressLint("SetTextI18n", "QueryPermissionsNeeded")
@@ -84,7 +89,8 @@ class SurveyHistoryActivity : AppCompatActivity() {
 
         folder.listFiles()?.forEach { file ->
             // Inflate the layout file that contains the TableLayout
-            val tableLayout = layoutInflater.inflate(R.layout.layout_presets, parentView, false).findViewById<TableLayout>(R.id.surveySquarePreset)
+            val tableLayout = layoutInflater.inflate(R.layout.layout_presets, parentView, false)
+                .findViewById<TableLayout>(R.id.surveySquarePreset)
 
             // Remove the tableLayout's parent, if it has one
             (tableLayout.parent as? ViewGroup)?.removeView(tableLayout)
