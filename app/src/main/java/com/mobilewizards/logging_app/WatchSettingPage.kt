@@ -37,10 +37,8 @@ class WatchSettingPage: Fragment() {
     val IDX_SWITCH = 0
     val IDX_SEEKBAR = 1
     val IDX_TEXTVIEW = 2
-    private val COMMENT_START = "#"
     private val TAG = "connect: "
     private val sharedPrefName = "DefaultSettings_watch"
-    private val CSV_FILE_CHANNEL_PATH = MediaStore.Downloads.EXTERNAL_CONTENT_URI
     private lateinit var sharedPreferences: SharedPreferences
     private val progressToFrequency = arrayOf(1, 5, 10, 50, 100, 200, 0)
     private var filePaths = mutableListOf<File>()
@@ -221,47 +219,9 @@ class WatchSettingPage: Fragment() {
                 Log.d(TAG, "no nodes found")
                 Toast.makeText(requireContext(), "Watch not connected", Toast.LENGTH_SHORT).show()
             } else {
-                //var settingsFile = generateSettingsFile()
                 sendSettingsJson(connectedNode, requireContext())
             }
         }
-    }
-
-    private fun generateSettingsFile(): File {
-        // generates a CSV file in a temporary directory and returns the File object
-
-        Log.d(TAG, "nodes found, sending")
-        val currentTimestamp = System.currentTimeMillis()
-        val formattedTime = SimpleDateFormat("ddMMyyyy_hhmmssSSS").format(currentTimestamp)
-        val newFileName = "setting_app_${formattedTime}.csv"
-        val tempDir = requireContext().cacheDir
-        val tempFile = File(tempDir, newFileName)
-
-        //create json data
-
-        // Tag for JSON data
-
-        tempFile.outputStream().buffered().use { outputStream ->
-            // Helper function for writing lines to the file
-            fun writeLine(line: String) {
-                outputStream.write("$line\n".toByteArray())
-            }
-
-            writeLine("$COMMENT_START setting_app_${formattedTime}.csv")
-            writeLine(COMMENT_START)
-            writeLine("$COMMENT_START Header Description:")
-            writeLine(COMMENT_START)
-            writeLine("$COMMENT_START Version: ${BuildConfig.VERSION_CODE} Platform: ${Build.VERSION.RELEASE} Manufacturer: ${Build.MANUFACTURER} Model: ${Build.MODEL}")
-            writeLine(COMMENT_START)
-            writeLine("$COMMENT_START JSON_DATA_START")
-
-            writeLine(generateSettingsJson())
-            outputStream.flush()
-
-        }
-
-        Log.d("File path", "temporary file created in ${tempFile.absolutePath}")
-        return tempFile
     }
 
 
@@ -276,19 +236,6 @@ class WatchSettingPage: Fragment() {
         }
     }
 
-    private fun fileSendSuccessful() {
-        if (fileSendOk != true) {
-            fileSendOk = true
-        }
-        Toast.makeText(requireContext(), "succeed", Toast.LENGTH_SHORT).show()
-    }
-
-    private fun fileSendTerminated() {
-        if (fileSendOk != false) {
-            fileSendOk = false
-        }
-        Toast.makeText(requireContext(), "failed", Toast.LENGTH_SHORT).show()
-    }
 
     private fun generateSettingsJson(): String {
         val jsonData = JSONObject()
@@ -315,18 +262,18 @@ class WatchSettingPage: Fragment() {
     }
 
     private fun sendSettingsJson(nodeId: String, context: Context) {
-        val TAG = "SendSettings"
         val messageClient = Wearable.getMessageClient(context)
         val watchSettingsPath = "/watch_settings" // Message identifier tag
         val settingsJsonString = generateSettingsJson()
-
-        // TODO: add a notification that pops up and informs the user that the send was successful
+        
         messageClient.sendMessage(nodeId, watchSettingsPath, settingsJsonString.toByteArray())
             .addOnCompleteListener { task ->
                 if (task.isSuccessful) {
-                    Log.d(TAG, "Settings JSON sent successfully. Value: $settingsJsonString")
+                    Log.d("SendSettings", "Settings JSON sent successfully. Value: $settingsJsonString")
+                    Toast.makeText(context, "Settings sent successfully", Toast.LENGTH_SHORT).show()
                 } else {
-                    Log.e(TAG, "Error sending settings JSON: ${task.exception}")
+                    Log.e("SendSettings", "Error sending settings JSON: ${task.exception}")
+                    Toast.makeText(context, "Failure sending settings", Toast.LENGTH_SHORT).show()
                 }
             }
     }
