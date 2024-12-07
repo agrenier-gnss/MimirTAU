@@ -193,17 +193,13 @@ class SettingsActivity: Activity() {
 
     // ---------------------------------------------------------------------------------------------
 
-
     private fun createSeekBarListener() {
         // Define a common seekbar listener
         seekBarChangeListener = object: SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
 
-                val textView: TextView =
-                    sensorsComponents.entries.find { it.value[IDX_SEEKBAR] == seekBar }?.value?.get(
-                        2
-                    ) as TextView
-
+                val textView =
+                    sensorsComponents.entries.find { it.value[IDX_SEEKBAR] == seekBar }?.value?.get(2) as TextView
                 updateTextView(textView, progress)
 
             }
@@ -223,11 +219,9 @@ class SettingsActivity: Activity() {
     private fun createSwitchListener() {
         // Define a common switch listener
         switchCheckedChangeListener = CompoundButton.OnCheckedChangeListener { buttonView, isChecked ->
-            if (buttonView is Switch) {
-                val seekBar: SeekBar? =
-                    sensorsComponents.entries.find { it.value[0] == buttonView }?.value?.get(1) as? SeekBar
-                seekBar?.isEnabled = isChecked
-            }
+            val seekBar =
+                sensorsComponents.entries.find { it.value[IDX_SWITCH] == buttonView }?.value?.get(1) as? SeekBar
+            seekBar?.isEnabled = isChecked
         }
     }
 
@@ -364,6 +358,7 @@ class SettingsActivity: Activity() {
             val sharedPreferences = context.getSharedPreferences(sharedPrefName, Context.MODE_PRIVATE)
             val editor: SharedPreferences.Editor = sharedPreferences.edit()
 
+            // Save Json data to shared preferences file
             jsonData.keys().forEach { key ->
                 val sensorValue: MutableList<Any?> = mutableListOf()
                 val isSwitchOn = jsonData.getJSONObject(key).getBoolean("switch")
@@ -382,7 +377,7 @@ class SettingsActivity: Activity() {
 
             editor.apply()
 
-            Log.d("SettingsActivity", "Settings successfully processed")
+            Log.d("SettingsActivity", "Settings successfully processed and saved")
 
             val broadcastIntent = Intent("ACTION_SETTINGS_UPDATED")
 
