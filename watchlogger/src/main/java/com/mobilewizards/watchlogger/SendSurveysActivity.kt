@@ -418,6 +418,7 @@ class SendSurveysActivity: Activity() {
                         TAG, "Failed to open channel: nodeId=$nodeId, path=$CSV_FILE_CHANNEL_PATH"
                     )
                     channelClient.unregisterChannelCallback(callback)
+                    cacheFile.delete()
                     tempFile.delete()
                 }
             }

@@ -32,28 +32,25 @@ import java.io.FileReader
 import java.lang.reflect.Type
 
 
+class WatchSettingPage: Fragment() {
 
-class WatchSettingPage : Fragment() {
-
-    val IDX_SWITCH   = 0
-    val IDX_SEEKBAR  = 1
+    val IDX_SWITCH = 0
+    val IDX_SEEKBAR = 1
     val IDX_TEXTVIEW = 2
-    private val VERSION_TAG = "Version: "
-    private val COMMENT_START = "# "
     private val TAG = "connect: "
     private val sharedPrefName = "DefaultSettings_watch"
-    private val CSV_FILE_CHANNEL_PATH = MediaStore.Downloads.EXTERNAL_CONTENT_URI
     private lateinit var sharedPreferences: SharedPreferences
     private val progressToFrequency = arrayOf(1, 5, 10, 50, 100, 200, 0)
     private var filePaths = mutableListOf<File>()
-    private lateinit var sensorsComponents : MutableMap<String, MutableList<Any?>>
+    private lateinit var sensorsComponents: MutableMap<String, MutableList<Any?>>
     private lateinit var bleHandler: BLEHandler
-    private var fileSendOk : Boolean = true
+    private var fileSendOk: Boolean = true
 
     interface SettingsFragmentListener {
         fun onSaveSettings()
 
     }
+
     private lateinit var listener: SettingsFragmentListener
 
     override fun onAttach(context: Context) {
@@ -68,8 +65,7 @@ class WatchSettingPage : Fragment() {
 
     @SuppressLint("ClickableViewAccessibility")
     override fun onCreateView(
-        inflater: LayoutInflater, container: ViewGroup?,
-        savedInstanceState: Bundle?
+        inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
     ): View? {
         // Inflate the layout for this fragment
         return inflater.inflate(R.layout.activity_settings_watch, container, false)
@@ -86,9 +82,9 @@ class WatchSettingPage : Fragment() {
         sharedPreferences = requireActivity().getSharedPreferences(sharedPrefName, Context.MODE_PRIVATE)
         if (!sharedPreferences.contains("ECG")) {
             val editor: SharedPreferences.Editor = sharedPreferences.edit()
-            editor.putString("GNSS",   Gson().toJson(mutableListOf(true, 0)))
-            editor.putString("IMU",   Gson().toJson(mutableListOf(false, 2)))
-            editor.putString("PSR",   Gson().toJson(mutableListOf(false, 0)))
+            editor.putString("GNSS", Gson().toJson(mutableListOf(true, 0)))
+            editor.putString("IMU", Gson().toJson(mutableListOf(false, 2)))
+            editor.putString("PSR", Gson().toJson(mutableListOf(false, 0)))
             editor.putString("STEPS", Gson().toJson(mutableListOf(false, 1)))
             editor.putString("ECG", Gson().toJson(mutableListOf(false, 4)))
             editor.putString("PPG", Gson().toJson(mutableListOf(false, 4)))
@@ -97,11 +93,11 @@ class WatchSettingPage : Fragment() {
         }
         checkAndRequestBluetoothPermissions()
 
-        AppActivityHandler.getFilePaths().forEach{ path ->
+        AppActivityHandler.getFilePaths().forEach { path ->
             filePaths.add(path)
         }
         // Load from shared preferences
-        val sensorsInit = arrayOf("GNSS", "IMU", "PSR", "STEPS","ECG","PPG","GSR")
+        val sensorsInit = arrayOf("GNSS", "IMU", "PSR", "STEPS", "ECG", "PPG", "GSR")
 
         //create a layout for each sensor in sensorList
         sensorsComponents = mutableMapOf()
@@ -129,9 +125,9 @@ class WatchSettingPage : Fragment() {
             sensorSwitch.setOnCheckedChangeListener { _, isChecked ->
                 setStateTextview(sensorSwitch.isChecked, sensorStateTextView)
                 ActivityHandler.setToggle(it) //toggle the status in singleton
-                if((it == "ECG" || it =="GSR") && isChecked){
-                    val opponent:String = if(it == "ECG")"GSR" else "ECG";
-                    var GSREnable:Boolean = false;
+                if ((it == "ECG" || it == "GSR") && isChecked) {
+                    val opponent: String = if (it == "ECG") "GSR" else "ECG";
+                    var GSREnable: Boolean = false;
                     sensorsComponents[opponent]?.forEach { component ->
                         when (component) {
                             is SwitchCompat -> {
@@ -141,7 +137,7 @@ class WatchSettingPage : Fragment() {
                             }
                         }
                     }
-                    if(GSREnable){
+                    if (GSREnable) {
                         ActivityHandler.setToggle(opponent)
                     }
                 }
@@ -160,16 +156,14 @@ class WatchSettingPage : Fragment() {
                 val row3 = tableLayout.getChildAt(2) as TableRow
                 val slider = row3.findViewById<SeekBar>(R.id.sensorSlider)
                 slider.max = progressToFrequency.size - 1
-                slider.progress =
-                    (sensorParameters[1] as Double).toInt() //set slider value to slider
-                slider.isEnabled =
-                    !ActivityHandler.isLogging() // Disable changing slider if logging is ongoing
+                slider.progress = (sensorParameters[1] as Double).toInt() //set slider value to slider
+                slider.isEnabled = !ActivityHandler.isLogging() // Disable changing slider if logging is ongoing
 
                 val sliderValue = row3.findViewById<TextView>(R.id.sliderValue)
                 sliderValue.text =
                     "${progressToFrequency[(sensorParameters[1] as Double).toInt()]} Hz" //set slider value to a text view
 
-                slider.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+                slider.setOnSeekBarChangeListener(object: SeekBar.OnSeekBarChangeListener {
                     override fun onProgressChanged(seekBar: SeekBar, progress: Int, fromUser: Boolean) {
                         if (progress != 6) {
                             sliderValue.text = "${progressToFrequency[progress]} Hz"
@@ -199,7 +193,6 @@ class WatchSettingPage : Fragment() {
         saveSettings() // Save default settings
 
 
-
         // Save current settings as default
         val btnDefault = view.findViewById<Button>(R.id.button_default)
         btnDefault.setOnClickListener {
@@ -207,16 +200,16 @@ class WatchSettingPage : Fragment() {
         }
 
 
-
         //control button
         val btnControl = view.findViewById<Button>(R.id.button_control)
-        btnControl.setOnClickListener{
-            sendFiles()
+        btnControl.setOnClickListener {
+            SendSettingToWatch()
         }
 
     }
-    @SuppressLint("Range", "SimpleDateFormat")
-    fun sendFiles(){
+
+    @SuppressLint("SimpleDateFormat")
+    fun SendSettingToWatch() {
         getWatchNodeId { nodeIds ->
             Log.d(TAG, "Received nodeIds: $nodeIds")
             // Check if there are connected nodes
@@ -226,98 +219,12 @@ class WatchSettingPage : Fragment() {
                 Log.d(TAG, "no nodes found")
                 Toast.makeText(requireContext(), "Watch not connected", Toast.LENGTH_SHORT).show()
             } else {
-                Log.d(TAG, "nodes found, sending")
-                val currentTimestamp = System.currentTimeMillis()
-                val contentValues = ContentValues().apply {
-                    put(MediaStore.Downloads.DISPLAY_NAME, "setting_app_${SimpleDateFormat("ddMMyyyy_hhmmssSSS").format(currentTimestamp)}.csv")
-                    put(MediaStore.Downloads.MIME_TYPE, "text/csv")
-                    put(MediaStore.Downloads.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
-                }
-
-                //create json data
-                val jsonData = JSONObject()
-                sensorsComponents.forEach { entry ->
-                    val mkey : SensorType = SensorType.TYPE_GNSS
-                    when(entry.key){
-
-                        "GNSS" -> jsonData.put("GNSS",JSONObject().apply {
-                            put("switch", (entry.value[IDX_SWITCH] as? SwitchCompat)?.isChecked as Boolean)
-                        })
-                        else -> jsonData.put(entry.key,JSONObject().apply {
-                            put("switch", (entry.value[IDX_SWITCH] as? SwitchCompat)?.isChecked as Boolean)
-                            put("value",progressToFrequency[(entry.value[IDX_SEEKBAR] as? SeekBar)?.progress as Int])
-                        })
-                    }
-                    /*
-                                        // Added health sensor for LoggingService
-                                        ActivityHandler.sensorsSelected[SensorType.TYPE_SPECIFIC_ECG] = Pair(false, 0)
-                                        ActivityHandler.sensorsSelected[SensorType.TYPE_SPECIFIC_PPG] = Pair(false, 0)
-                                        ActivityHandler.sensorsSelected[SensorType.TYPE_SPECIFIC_GSR] = Pair(false, 0)*/
-                }
-                // Tag for JSON data
-                val jsonTag = "JSON_DATA_START"
-                val uri = requireContext().contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, contentValues)
-                var path = ""
-                uri?.let { mediaUri ->
-                    requireActivity().contentResolver.openOutputStream(mediaUri)?.use { outputStream ->
-
-                        outputStream.write(COMMENT_START.toByteArray())
-                        outputStream.write("setting_app_${SimpleDateFormat("ddMMyyyy_hhmmssSSS").format(currentTimestamp)}.csv\n".toByteArray())
-                        outputStream.write(COMMENT_START.toByteArray())
-                        outputStream.write("\n".toByteArray())
-                        outputStream.write(COMMENT_START.toByteArray());
-                        outputStream.write("Header Description:".toByteArray());
-                        outputStream.write("\n".toByteArray())
-                        outputStream.write(COMMENT_START.toByteArray())
-                        outputStream.write("\n".toByteArray())
-                        outputStream.write(COMMENT_START.toByteArray())
-                        outputStream.write(VERSION_TAG.toByteArray())
-                        var manufacturer: String = Build.MANUFACTURER
-                        var model: String = Build.MODEL
-                        var fileVersion: String = "${BuildConfig.VERSION_CODE}" + " Platform: " +
-                                "${Build.VERSION.RELEASE}" + " " + "Manufacturer: "+
-                                "${manufacturer}" + " " + "Model: " + "${model}"
-
-                        outputStream.write(fileVersion.toByteArray())
-                        outputStream.write("\n".toByteArray())
-                        outputStream.write(COMMENT_START.toByteArray())
-                        outputStream.write("\n".toByteArray())
-
-                        // Write JSON data as CSV with a tag
-                        outputStream.write("$jsonTag\n".toByteArray())
-                        outputStream.write(jsonData.toString().toByteArray())
-
-                        AppActivityHandler.getFilePaths().forEach { file ->
-
-                            val reader = BufferedReader(FileReader(file))
-
-                            outputStream.write("\n".toByteArray())
-                            outputStream.write(COMMENT_START.toByteArray())
-                            outputStream.write("${file.name}\n".toByteArray())
-
-                            var line: String? = reader.readLine()
-                            while (line != null) {
-                                outputStream.write("$line\n".toByteArray())
-                                line = reader.readLine()
-                            }
-                            reader.close()
-                        }
-                        outputStream.flush()
-
-                        val cursor = requireContext().contentResolver.query(mediaUri, null, null, null, null)
-                        cursor?.use { c ->
-                            if (c.moveToFirst()) {
-                                path = c.getString(c.getColumnIndex(MediaStore.Images.Media.DATA))
-                                // Use the file path as needed
-                                Log.d("File path", path)
-                            }
-                        }
-                    }
-                }
-                sendCsvFileToPhone(File(path), connectedNode, requireContext())
+                sendSettingsJson(connectedNode, requireContext())
             }
         }
     }
+
+
     private fun getWatchNodeId(callback: (ArrayList<String>) -> Unit) {
         val nodeIds = ArrayList<String>()
         Wearable.getNodeClient(requireActivity()).connectedNodes.addOnSuccessListener { nodes ->
@@ -328,72 +235,47 @@ class WatchSettingPage : Fragment() {
             callback(nodeIds)
         }
     }
-    private fun fileSendSuccessful(){
-        if (fileSendOk != true){
-            fileSendOk = true
-        }
-        Toast.makeText(requireContext(), "succeed", Toast.LENGTH_SHORT).show()
-    }
-    private fun fileSendTerminated(){
-        if (fileSendOk != false){
-            fileSendOk = false
-        }
-        Toast.makeText(requireContext(), "failed", Toast.LENGTH_SHORT).show()
-    }
-    private fun sendCsvFileToPhone(csvFile: File, nodeId: String, context: Context) {
-        Log.d(TAG, "in sendCsvFileToPhone " + csvFile.name)
 
 
-        // Getting channelClient for sending the file
-        val channelClient = Wearable.getChannelClient(context)
-        val callback = object : ChannelClient.ChannelCallback() {
-            override fun onChannelOpened(channel: ChannelClient.Channel) {
-                Log.d(TAG, "onChannelOpened " + channel.nodeId)
-                // Send the CSV file to the phone
-                channelClient.sendFile(channel, csvFile.toUri()).addOnCompleteListener { task ->
-                    if (task.isSuccessful) {
-                        AppActivityHandler.fileSendStatus(true)
-                        fileSendSuccessful()
-                        channelClient.close(channel)
-                    } else {
-                        Log.e(TAG, "Error with file sending " + task.exception.toString())
-                        AppActivityHandler.fileSendStatus(false)
-                        fileSendTerminated()
-                        channelClient.close(channel)
-                    }
+    private fun generateSettingsJson(): String {
+        val jsonData = JSONObject()
+        sensorsComponents.forEach { entry ->
+            val mkey: SensorType = SensorType.TYPE_GNSS
+            when (entry.key) {
+
+                "GNSS" -> jsonData.put("GNSS", JSONObject().apply {
+                    put("switch", (entry.value[IDX_SWITCH] as? SwitchCompat)?.isChecked as Boolean)
+                })
+
+                else -> jsonData.put(entry.key, JSONObject().apply {
+                    put("switch", (entry.value[IDX_SWITCH] as? SwitchCompat)?.isChecked as Boolean)
+                    put("value", progressToFrequency[(entry.value[IDX_SEEKBAR] as? SeekBar)?.progress as Int])
+                })
+            }/*
+                                        // Added health sensor for LoggingService
+                                        ActivityHandler.sensorsSelected[SensorType.TYPE_SPECIFIC_ECG] = Pair(false, 0)
+                                        ActivityHandler.sensorsSelected[SensorType.TYPE_SPECIFIC_PPG] = Pair(false, 0)
+                                        ActivityHandler.sensorsSelected[SensorType.TYPE_SPECIFIC_GSR] = Pair(false, 0)*/
+        }
+
+        return jsonData.toString()
+    }
+
+    private fun sendSettingsJson(nodeId: String, context: Context) {
+        val messageClient = Wearable.getMessageClient(context)
+        val watchSettingsPath = "/watch_settings" // Message identifier tag
+        val settingsJsonString = generateSettingsJson()
+        
+        messageClient.sendMessage(nodeId, watchSettingsPath, settingsJsonString.toByteArray())
+            .addOnCompleteListener { task ->
+                if (task.isSuccessful) {
+                    Log.d("SendSettings", "Settings JSON sent successfully. Value: $settingsJsonString")
+                    Toast.makeText(context, "Settings sent successfully", Toast.LENGTH_SHORT).show()
+                } else {
+                    Log.e("SendSettings", "Error sending settings JSON: ${task.exception}")
+                    Toast.makeText(context, "Failure sending settings", Toast.LENGTH_SHORT).show()
                 }
             }
-
-            override fun onChannelClosed(
-                channel: ChannelClient.Channel,
-                closeReason: Int,
-                appSpecificErrorCode: Int
-            ) {
-                Log.d(
-                    TAG,
-                    "Channel closed: nodeId=$nodeId, reason=$closeReason, errorCode=$appSpecificErrorCode"
-                )
-                Wearable.getChannelClient(requireContext()).close(channel)
-            }
-        }
-
-        channelClient.registerChannelCallback(callback)
-        channelClient.openChannel(
-            nodeId,
-            CSV_FILE_CHANNEL_PATH.toString()
-        ).addOnCompleteListener { result ->
-            Log.d(TAG, result.toString())
-            if (result.isSuccessful) {
-                Log.d(TAG, "Channel opened: nodeId=$nodeId, path=$CSV_FILE_CHANNEL_PATH")
-                callback.onChannelOpened(result.result )
-            } else {
-                Log.e(
-                    TAG,
-                    "Failed to open channel: nodeId=$nodeId, path=$CSV_FILE_CHANNEL_PATH"
-                )
-                channelClient.unregisterChannelCallback(callback)
-            }
-        }
     }
 
     // ---------------------------------------------------------------------------------------------
@@ -441,26 +323,20 @@ class WatchSettingPage : Fragment() {
         }
     }
 
-    // ---------------------------------------------------------------------------------------------
-
-
-
-
-
 
     // ---------------------------------------------------------------------------------------------
 
-    fun saveSettings(){
+    fun saveSettings() {
         sensorsComponents.forEach { entry ->
-            var mkey : SensorType = SensorType.TYPE_GNSS
-            when(entry.key){
+            var mkey: SensorType = SensorType.TYPE_GNSS
+            when (entry.key) {
                 "GNSS" -> mkey = SensorType.TYPE_GNSS
-                "IMU"  -> mkey = SensorType.TYPE_IMU
-                "PSR"  -> mkey = SensorType.TYPE_PRESSURE
-                "STEPS"-> mkey = SensorType.TYPE_STEPS
-                "ECG"  -> mkey = SensorType.TYPE_SPECIFIC_ECG
-                "PPG"  -> mkey = SensorType.TYPE_SPECIFIC_PPG
-                "GSR"  -> mkey = SensorType.TYPE_SPECIFIC_GSR
+                "IMU" -> mkey = SensorType.TYPE_IMU
+                "PSR" -> mkey = SensorType.TYPE_PRESSURE
+                "STEPS" -> mkey = SensorType.TYPE_STEPS
+                "ECG" -> mkey = SensorType.TYPE_SPECIFIC_ECG
+                "PPG" -> mkey = SensorType.TYPE_SPECIFIC_PPG
+                "GSR" -> mkey = SensorType.TYPE_SPECIFIC_GSR
 
             }
             if (entry.key == "GNSS") {
@@ -476,8 +352,7 @@ class WatchSettingPage : Fragment() {
 
             Log.d(
                 "SettingsActivity",
-                "Settings for ${entry.key} changed to " +
-                        "${ActivityHandler.sensorsSelected[mkey].toString()}."
+                "Settings for ${entry.key} changed to ${ActivityHandler.sensorsSelected[mkey].toString()}."
             )
         }
         Log.d("SettingsActivity", "Settings saved.")
@@ -485,25 +360,25 @@ class WatchSettingPage : Fragment() {
 
     // ---------------------------------------------------------------------------------------------
 
-    fun saveDefaultSettings(){
+    fun saveDefaultSettings() {
         val editor: SharedPreferences.Editor = sharedPreferences.edit()
         sensorsComponents.forEach { entry ->
-            var mkey : SensorType = SensorType.TYPE_GNSS
-            when(entry.key){
+            var mkey: SensorType = SensorType.TYPE_GNSS
+            when (entry.key) {
                 "GNSS" -> mkey = SensorType.TYPE_GNSS
-                "IMU"  -> mkey = SensorType.TYPE_IMU
-                "PSR"  -> mkey = SensorType.TYPE_PRESSURE
-                "STEPS"-> mkey = SensorType.TYPE_STEPS
-                "ECG"  -> mkey = SensorType.TYPE_SPECIFIC_ECG
-                "PPG"  -> mkey = SensorType.TYPE_SPECIFIC_PPG
-                "GSR"  -> mkey = SensorType.TYPE_SPECIFIC_GSR
+                "IMU" -> mkey = SensorType.TYPE_IMU
+                "PSR" -> mkey = SensorType.TYPE_PRESSURE
+                "STEPS" -> mkey = SensorType.TYPE_STEPS
+                "ECG" -> mkey = SensorType.TYPE_SPECIFIC_ECG
+                "PPG" -> mkey = SensorType.TYPE_SPECIFIC_PPG
+                "GSR" -> mkey = SensorType.TYPE_SPECIFIC_GSR
             }
-            if(entry.key == "GNSS")
-            {
+            if (entry.key == "GNSS") {
                 editor.putString(
                     entry.key, Gson().toJson(
                         mutableListOf(
-                            (entry.value[IDX_SWITCH] as? SwitchCompat)?.isChecked as Boolean, 0)
+                            (entry.value[IDX_SWITCH] as? SwitchCompat)?.isChecked as Boolean, 0
+                        )
                     )
                 )
             } else {
@@ -518,8 +393,7 @@ class WatchSettingPage : Fragment() {
             }
             Log.d(
                 "SettingsActivity",
-                "Default settings for ${entry.key} changed to " +
-                        "${ActivityHandler.sensorsSelected[mkey].toString()}."
+                "Default settings for ${entry.key} changed to ${ActivityHandler.sensorsSelected[mkey].toString()}."
             )
         }
         editor.apply()
@@ -528,7 +402,6 @@ class WatchSettingPage : Fragment() {
     }
 
     // ---------------------------------------------------------------------------------------------
-
 
 
     // Creates main_menu.xml
@@ -551,7 +424,7 @@ class WatchSettingPage : Fragment() {
 
     // ---------------------------------------------------------------------------------------------
 
-    fun setStateTextview(enabled: Boolean,textview: TextView) {
+    fun setStateTextview(enabled: Boolean, textview: TextView) {
         if (enabled) {
             textview.text = "Enabled"
         } else {
@@ -561,9 +434,9 @@ class WatchSettingPage : Fragment() {
 
     // ---------------------------------------------------------------------------------------------
 
-    private fun loadMutableList(key:String): MutableList<String> {
+    private fun loadMutableList(key: String): MutableList<String> {
         val jsonString = sharedPreferences.getString(key, "")
-        val type: Type = object : TypeToken<MutableList<Any>>() {}.type
+        val type: Type = object: TypeToken<MutableList<Any>>() {}.type
         return Gson().fromJson(jsonString, type) ?: mutableListOf()
     }
 }

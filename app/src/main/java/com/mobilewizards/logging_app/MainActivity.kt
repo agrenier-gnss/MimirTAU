@@ -755,7 +755,7 @@ class MessageListenerService: WearableListenerService() {
             FILE_SIZE_PATH -> {
                 // Convert the byte array back to a String
                 val fileSize = String(messageEvent.data)
-                Log.d("fileRenameReceive", "Received file size: $fileSize")
+                Log.d("fileSizeReceive", "Received file size: $fileSize")
                 // Broadcast the file size to MainActivity
                 val intent = Intent("ACTION_SET_FILE_SIZE")
                 intent.putExtra("fileSize", fileSize)

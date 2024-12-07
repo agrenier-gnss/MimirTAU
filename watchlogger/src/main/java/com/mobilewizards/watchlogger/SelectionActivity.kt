@@ -8,6 +8,15 @@ import android.os.Bundle
 import android.widget.Button
 import androidx.core.app.ActivityCompat
 import com.mobilewizards.logging_app.databinding.ActivitySelectionBinding
+import android.util.Log
+import com.google.android.gms.wearable.MessageEvent
+import com.google.android.gms.wearable.WearableListenerService
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.IntentFilter
+import android.widget.Toast
+import org.json.JSONObject
+
 
 class SelectionActivity: Activity() {
 
@@ -15,10 +24,36 @@ class SelectionActivity: Activity() {
 
     private val SETTINGS_REQUEST_CODE = 1 // This is to wait for settings to be done before starting
 
+    // ---------------------------------------------------------------------------------------------
+
+    //BroadcastReceiver to handle settings JSON sent from the phone
+    private val settingsJsonReceiver = object: BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            if (intent.action == "ACTION_RECEIVE_SETTINGS_JSON") {
+                val settingsJson = intent.getStringExtra("settings_json")
+
+                Toast.makeText(context, "Settings received", Toast.LENGTH_SHORT).show()
+
+                settingsJson?.let {
+                    val jsonObject = JSONObject(it)
+                    Log.d("SelectionActivity", "Sending settings to be processed in settingsActivity")
+                    SettingsActivity.processSettingsJson(context, jsonObject)
+                }
+            }
+        }
+    }
+
+    // ---------------------------------------------------------------------------------------------
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivitySelectionBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
+        // Register the receiver to listen for settings JSON
+        registerReceiver(
+            settingsJsonReceiver, IntentFilter("ACTION_RECEIVE_SETTINGS_JSON"), RECEIVER_NOT_EXPORTED
+        )
 
         this.checkPermissions()
 
@@ -42,6 +77,13 @@ class SelectionActivity: Activity() {
         }
 
 
+    }
+
+    // =============================================================================================
+
+    override fun onDestroy() {
+        super.onDestroy()
+        unregisterReceiver(settingsJsonReceiver)
     }
 
     // =============================================================================================
@@ -85,6 +127,30 @@ class SelectionActivity: Activity() {
 
         if (!allPermissionsGranted) {
             ActivityCompat.requestPermissions(this, permissions, 225)
+        }
+    }
+
+
+}
+
+// =============================================================================================
+
+class WatchMessageListenerService: WearableListenerService() {
+
+    private val SETTINGS_PATH = "/watch_settings" // Path to identify settings JSON
+
+    override fun onMessageReceived(messageEvent: MessageEvent) {
+
+        if (messageEvent.path == SETTINGS_PATH) {
+            val settingsJson = String(messageEvent.data)
+            Log.d("WatchMessageListener", "Received settings JSON: $settingsJson")
+
+            val intent = Intent("ACTION_RECEIVE_SETTINGS_JSON")
+            intent.putExtra("settings_json", settingsJson)
+            sendBroadcast(intent)
+
+        } else {
+            super.onMessageReceived(messageEvent)
         }
     }
 }

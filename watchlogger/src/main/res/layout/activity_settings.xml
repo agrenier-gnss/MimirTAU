@@ -57,7 +57,8 @@
                 android:layout_height="wrap_content"
                 android:checked="true"
                 android:text="@string/str_gnss"
-                android:textColor="@color/fontWhite" />
+                android:textColor="@color/fontWhite"
+                tools:ignore="UseSwitchCompatOrMaterialXml" />
 
             <TextView
                 android:id="@+id/settings_tv_gnss"
@@ -78,7 +79,8 @@
                 android:layout_height="wrap_content"
                 android:checked="false"
                 android:text="@string/str_imu"
-                android:textColor="@color/fontWhite" />
+                android:textColor="@color/fontWhite"
+                tools:ignore="UseSwitchCompatOrMaterialXml" />
 
             <TextView
                 android:id="@+id/settings_tv_imu"
@@ -109,7 +111,8 @@
                 android:layout_height="wrap_content"
                 android:checked="false"
                 android:text="@string/str_baro"
-                android:textColor="@color/fontWhite" />
+                android:textColor="@color/fontWhite"
+                tools:ignore="UseSwitchCompatOrMaterialXml" />
 
             <TextView
                 android:id="@+id/settings_tv_baro"
@@ -140,7 +143,8 @@
                 android:layout_height="wrap_content"
                 android:checked="false"
                 android:text="@string/str_steps"
-                android:textColor="@color/fontWhite" />
+                android:textColor="@color/fontWhite"
+                tools:ignore="UseSwitchCompatOrMaterialXml" />
 
             <TextView
                 android:id="@+id/settings_tv_step"
@@ -182,7 +186,8 @@
                 android:layout_width="130dp"
                 android:layout_height="wrap_content"
                 android:text="@string/str_ecg"
-                android:textColor="@color/fontWhite" />
+                android:textColor="@color/fontWhite"
+                tools:ignore="UseSwitchCompatOrMaterialXml" />
 
             <TextView
                 android:id="@+id/settings_tv_ecg"
@@ -212,7 +217,8 @@
                 android:layout_width="130dp"
                 android:layout_height="wrap_content"
                 android:text="@string/str_ppg"
-                android:textColor="@color/fontWhite" />
+                android:textColor="@color/fontWhite"
+                tools:ignore="UseSwitchCompatOrMaterialXml" />
 
             <TextView
                 android:id="@+id/settings_tv_ppg"
@@ -242,7 +248,8 @@
                 android:layout_width="130dp"
                 android:layout_height="wrap_content"
                 android:text="@string/str_gsr"
-                android:textColor="@color/fontWhite" />
+                android:textColor="@color/fontWhite"
+                tools:ignore="UseSwitchCompatOrMaterialXml" />
 
             <TextView
                 android:id="@+id/settings_tv_gsr"
