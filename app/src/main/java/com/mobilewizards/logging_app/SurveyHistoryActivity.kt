@@ -80,6 +80,18 @@ class SurveyHistoryActivity: AppCompatActivity() {
         }
     }
 
+    fun formatFileSize(size: Long): String {
+        val kb = 1024
+        val mb = kb * 1024
+        val gb = mb * 1024
+
+        return when {
+            size >= gb -> String.format("%.2f GB", size.toDouble() / gb)
+            size >= mb -> String.format("%.2f MB", size.toDouble() / mb)
+            else -> String.format("%d bytes", size)
+        }
+    }
+
     @SuppressLint("SetTextI18n", "QueryPermissionsNeeded")
     fun populateView(parentView: ViewGroup) {
         parentView.removeAllViews()
@@ -99,7 +111,7 @@ class SurveyHistoryActivity: AppCompatActivity() {
             val surveyTitle = tableLayout.findViewById<TextView>(R.id.surveyTitle)
             surveyTitle.text = file.name
             val fileSize = tableLayout.findViewById<TextView>(R.id.fileSize)
-            fileSize.text = "${file.length()} bytes"
+            fileSize.text = formatFileSize(file.length())
             val fileLocation = tableLayout.findViewById<TextView>(R.id.surveyLocation)
             fileLocation.text = file.canonicalPath.toString()
 
