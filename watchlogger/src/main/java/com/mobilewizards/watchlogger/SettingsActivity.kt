@@ -23,19 +23,27 @@ import com.google.gson.reflect.TypeToken
 import org.json.JSONObject
 import java.lang.reflect.Type
 
+
+// ---------------------------------------------------------------------------------------------
+
 const val IDX_SWITCH = 0
 const val IDX_SEEKBAR = 1
 const val IDX_TEXTVIEW = 2
 const val infinitySymbol = "\u221E"
 const val sharedPrefName = "DefaultSettings"
 
+val progressToFrequency = arrayOf(1, 5, 10, 50, 100, 200, 0)
+val frequencyToProgress: Map<Int, Int> =
+    progressToFrequency.mapIndexed { index, frequency -> frequency to index }.toMap()
+
+// ---------------------------------------------------------------------------------------------
+
 class SettingsActivity: Activity() {
     private lateinit var binding: ActivitySettingsBinding
     private lateinit var sharedPreferences: SharedPreferences
-    private val progressToFrequency = arrayOf(1, 5, 10, 50, 100, 200, 0)
+
     private lateinit var sensorsComponents: MutableMap<SensorType, MutableList<Any?>>
-    private val frequencyToProgress: Map<Int, Int> =
-        progressToFrequency.mapIndexed { index, frequency -> frequency to index }.toMap()
+
     private lateinit var seekBarChangeListener: SeekBar.OnSeekBarChangeListener
     private lateinit var switchCheckedChangeListener: CompoundButton.OnCheckedChangeListener
 
@@ -46,7 +54,7 @@ class SettingsActivity: Activity() {
             if (intent.action == "ACTION_SETTINGS_UPDATED") {
                 // refresh UI whenever settings are received from the phone
                 Log.d("SettingsActivity", "Broadcast received. Refreshing UI.")
-                refreshUIFromPreferences()
+                loadSharedPreferencesToUi()
             }
         }
     }
@@ -135,7 +143,6 @@ class SettingsActivity: Activity() {
             SensorType.TYPE_SPECIFIC_GSR to mutableListOf(R.id.switch_gsr, R.id.settings_sb_gsr, R.id.settings_tv_gsr),
         )
 
-
         sensorsIDs.forEach { entry ->
             sensorsComponents[entry.key] = mutableListOf(
                 findViewById<Switch>(entry.value[IDX_SWITCH]),
@@ -145,10 +152,13 @@ class SettingsActivity: Activity() {
         }
     }
 
-
     // ---------------------------------------------------------------------------------------------
 
     private fun loadSharedPreferencesToUi() {
+
+        Log.d("SettingsActivity", "UI updated from shared preferences.")
+
+
         // Load Initialisation values from sharedPreferences to the sensor types
         val sensorsInit: Map<SensorType, MutableList<String>> = mapOf(
             SensorType.TYPE_GNSS to loadSharedPreference("GNSS"),
@@ -349,70 +359,10 @@ class SettingsActivity: Activity() {
 
     // ---------------------------------------------------------------------------------------------
 
-    private fun refreshUIFromPreferences() {
-
-        // Map sensor types to their shared preferences
-        val sensorsInit: Map<SensorType, Pair<Boolean, Int>> = mapOf(
-            SensorType.TYPE_GNSS to loadPreference(sharedPreferences, "GNSS"),
-            SensorType.TYPE_IMU to loadPreference(sharedPreferences, "IMU"),
-            SensorType.TYPE_PRESSURE to loadPreference(sharedPreferences, "PSR"),
-            SensorType.TYPE_STEPS to loadPreference(sharedPreferences, "STEPS"),
-            SensorType.TYPE_SPECIFIC_ECG to loadPreference(sharedPreferences, "ECG"),
-            SensorType.TYPE_SPECIFIC_PPG to loadPreference(sharedPreferences, "PPG"),
-            SensorType.TYPE_SPECIFIC_GSR to loadPreference(sharedPreferences, "GSR")
-        )
-
-        Log.d("SettingsActivity", "${sensorsInit[SensorType.TYPE_IMU]}")
-
-        // Update UI for each sensor
-        sensorsInit.forEach { (sensorType, values) ->
-            sensorsComponents[sensorType]?.let { components ->
-                val (isSwitchOn, frequencyIndex) = values
-
-                // Update UI components
-                (components[IDX_SWITCH] as Switch).isChecked = isSwitchOn
-
-                if (sensorType != SensorType.TYPE_GNSS) {
-                    val seekBar = components[IDX_SEEKBAR] as SeekBar
-                    val textView = components[IDX_TEXTVIEW] as TextView
-
-                    seekBar.isEnabled = isSwitchOn
-                    seekBar.progress = frequencyIndex
-
-                    updateTextView(textView, frequencyIndex)
-
-                }
-
-            }
-        }
-
-        Log.d("SettingsActivity", "UI updated from shared preferences.")
-    }
-
-
-    // ---------------------------------------------------------------------------------------------
-
-    private fun loadPreference(sharedPreferences: SharedPreferences, key: String): Pair<Boolean, Int> {
-        val jsonString = sharedPreferences.getString(key, null) ?: return Pair(false, 1)
-        val type: Type = object: TypeToken<List<Any>>() {}.type
-
-        val settings: List<Any> = Gson().fromJson(jsonString, type)
-        val isSwitchOn = settings[0] as Boolean
-        val frequencyIndex = (settings[1] as Double).toInt()
-
-        return Pair(isSwitchOn, frequencyIndex)
-    }
-
-
-    // ---------------------------------------------------------------------------------------------
-
     companion object {
         fun processSettingsJson(context: Context, jsonData: JSONObject) {
             val sharedPreferences = context.getSharedPreferences(sharedPrefName, Context.MODE_PRIVATE)
             val editor: SharedPreferences.Editor = sharedPreferences.edit()
-
-            val progressToFrequency = arrayOf(1, 5, 10, 50, 100, 200, 0)
-            val frequencyToProgress = progressToFrequency.mapIndexed { index, freq -> freq to index }.toMap()
 
             jsonData.keys().forEach { key ->
                 val sensorValue: MutableList<Any?> = mutableListOf()
@@ -435,9 +385,9 @@ class SettingsActivity: Activity() {
             Log.d("SettingsActivity", "Settings successfully processed")
 
             val broadcastIntent = Intent("ACTION_SETTINGS_UPDATED")
+
+            // broadcast update to make sure UI is up to date
             LocalBroadcastManager.getInstance(context).sendBroadcast(broadcastIntent)
-
-
         }
     }
 
