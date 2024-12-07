@@ -224,7 +224,7 @@ class MainActivity: AppCompatActivity() {
                     if (task.isSuccessful) {
 
                         Log.d("channel", "File successfully stored")
-                        (applicationContext as? GlobalNotification)?.showFileReceivedDialog(file.toString())
+
 
                         // Rename the file to the original name if it has been received
 
@@ -524,6 +524,9 @@ class MainActivity: AppCompatActivity() {
                 if (success) {
                     Log.d("fileRenameReceive", "rename success! File renamed to $receivedFileName")
                     file = originalFile
+                    Log.d("fileRenameReceive", "at ${originalFile.path}")
+                    //call received dialog
+                    (applicationContext as? GlobalNotification)?.showFileReceivedDialog(originalFile.path)
                 } else {
                     Log.d("fileRenameReceive", "rename failure!")
                 }
