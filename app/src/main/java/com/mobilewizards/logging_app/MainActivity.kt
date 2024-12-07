@@ -12,10 +12,12 @@ import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
+import android.net.Uri
 import android.os.Bundle
 import android.os.Environment
 import android.os.Handler
 import android.os.Looper
+import android.os.StrictMode
 import android.os.SystemClock
 import android.util.Log
 import android.view.LayoutInflater
@@ -29,6 +31,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import androidx.core.net.toUri
 import com.google.android.gms.wearable.ChannelClient
 import com.google.android.gms.wearable.MessageEvent
@@ -660,7 +663,44 @@ class GlobalNotification: Application() {
             val title = dialogView.findViewById<TextView>(R.id.dialog_title)
             val message = dialogView.findViewById<TextView>(R.id.dialog_message)
             val okBtn = dialogView.findViewById<Button>(R.id.positiveButton)
+            val cancelBtn = dialogView.findViewById<Button>(R.id.negativeButton)
+            okBtn.text = "View";
             okBtn.setOnClickListener {
+                dialog.dismiss()
+                try {
+                    val builder = StrictMode.VmPolicy.Builder()
+                    StrictMode.setVmPolicy(builder.build())
+                    val intent = Intent(Intent.ACTION_VIEW)
+                    val uri = Uri.parse("content://" + filePath )
+                    intent.setDataAndType(uri, "*/*")
+                    intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    startActivity(intent)
+                } catch (e: Exception) {
+                    val inflater = LayoutInflater.from(this)
+                    val dialogView = inflater.inflate(R.layout.custom_dialog, null)
+
+                    val builder = AlertDialog.Builder(this)
+                    builder.setView(dialogView as View)
+
+                    val dialog = builder.create()
+                    dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+                    val title = dialogView.findViewById<TextView>(R.id.dialog_title)
+                    val message = dialogView.findViewById<TextView>(R.id.dialog_message)
+                    val okBtn = dialogView.findViewById<Button>(R.id.positiveButton)
+                    val cancelBtn = dialogView.findViewById<Button>(R.id.negativeButton)
+                    okBtn.setVisibility(View.GONE)
+                    cancelBtn.setOnClickListener {
+                        dialog.dismiss()
+                    }
+                    Log.d("test",e.message.toString())
+                    title.text = "File Corruption"
+                    message.text = "Error in opening of this file"
+                    dialog.show()
+                }
+
+            }
+            cancelBtn.setOnClickListener {
                 dialog.dismiss()
             }
             title.text = "File Received"

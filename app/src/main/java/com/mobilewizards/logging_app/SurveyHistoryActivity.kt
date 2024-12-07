@@ -105,7 +105,7 @@ class SurveyHistoryActivity : AppCompatActivity() {
                     StrictMode.setVmPolicy(builder.build())
 
                     val intent = Intent(Intent.ACTION_VIEW)
-                    val uri = Uri.parse("content://" + file.canonicalFile.parent)
+                    val uri = Uri.parse("content://" + file.canonicalPath.toString() )
                     intent.setDataAndType(uri, "*/*")
                     intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
                     startActivity(intent)
@@ -121,7 +121,9 @@ class SurveyHistoryActivity : AppCompatActivity() {
                     val title = dialogView.findViewById<TextView>(R.id.dialog_title)
                     val message = dialogView.findViewById<TextView>(R.id.dialog_message)
                     val okBtn = dialogView.findViewById<Button>(R.id.positiveButton)
-                    okBtn.setOnClickListener {
+                    val cancelBtn = dialogView.findViewById<Button>(R.id.negativeButton)
+                    okBtn.setVisibility(View.GONE)
+                    cancelBtn.setOnClickListener {
                         dialog.dismiss()
                     }
                     title.text = "File Corruption"

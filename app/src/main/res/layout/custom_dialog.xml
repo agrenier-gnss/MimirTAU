@@ -27,16 +27,33 @@
         android:paddingBottom="16dp"
         android:text=""
         tools:ignore="MissingConstraints" />
-    <Button
-        android:id="@+id/positiveButton"
-        android:layout_width="200dp"
-        android:layout_centerHorizontal="true"
+
+    <LinearLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_below="@id/dialog_message"
-        android:text="OK"
-        app:shapeAppearance="@style/ButtonShapeAppearance"
-        android:textColor="@android:color/white"
-        tools:ignore="MissingConstraints" />
+        android:orientation="horizontal"
+        android:gravity="center">
+
+        <Button
+            android:id="@+id/negativeButton"
+            android:layout_width="155dp"
+            android:layout_height="wrap_content"
+            android:backgroundTint="@color/mauve"
+            android:text="OK"
+            android:textColor="@android:color/black"
+            app:shapeAppearance="@style/ButtonShapeAppearance" />
+
+        <Button
+            android:id="@+id/positiveButton"
+            android:layout_width="155dp"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="30dp"
+            android:text="OK"
+            app:shapeAppearance="@style/ButtonShapeAppearance"
+            android:textColor="@android:color/white" />
+
+    </LinearLayout>
 
 
 </RelativeLayout>
