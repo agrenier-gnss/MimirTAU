@@ -1,14 +1,12 @@
 package com.mobilewizards.logging_app
 
-import android.annotation.SuppressLint
-
 import android.app.Activity
+import android.content.BroadcastReceiver
 import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.content.SharedPreferences
-import android.net.Uri
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
 import android.util.Log
 import android.widget.Button
 import android.widget.CompoundButton
@@ -19,25 +17,16 @@ import com.mimir.sensors.SensorType
 import com.mobilewizards.watchlogger.WatchActivityHandler
 import com.mobilewizards.logging_app.databinding.ActivitySettingsBinding
 import android.widget.Toast
-import androidx.annotation.RequiresApi
-import androidx.core.net.toUri
-import com.google.android.gms.wearable.ChannelClient
-import com.google.android.gms.wearable.Wearable
+import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import org.json.JSONObject
-import java.io.BufferedReader
-import java.io.File
-import java.io.FileReader
-import java.io.IOException
-import java.io.InputStream
 import java.lang.reflect.Type
-import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
 
 const val IDX_SWITCH = 0
 const val IDX_SEEKBAR = 1
 const val IDX_TEXTVIEW = 2
+const val infinitySymbol = "\u221E"
 
 class SettingsActivity: Activity() {
     private lateinit var binding: ActivitySettingsBinding
@@ -48,12 +37,33 @@ class SettingsActivity: Activity() {
     private lateinit var sensorsComponents: MutableMap<SensorType, MutableList<Any?>>
     private val frequencyToProgress: Map<Int, Int> =
         progressToFrequency.mapIndexed { index, frequency -> frequency to index }.toMap()
+    private lateinit var seekBarChangeListener: SeekBar.OnSeekBarChangeListener
+    private lateinit var switchCheckedChangeListener: CompoundButton.OnCheckedChangeListener
+
+    // =============================================================================================
+
+    private val updateReceiver = object: BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            if (intent.action == "ACTION_SETTINGS_UPDATED") {
+                // refresh UI whenever settings are received from the phone
+                Log.d("SettingsActivity", "Broadcast received. Refreshing UI.")
+                refreshUIFromPreferences()
+            }
+        }
+    }
+
+    // =============================================================================================
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        LocalBroadcastManager.getInstance(this).registerReceiver(
+            updateReceiver, IntentFilter("ACTION_SETTINGS_UPDATED")
+        )
+
         binding = ActivitySettingsBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
 
         // Initialisation values
         sharedPreferences = getSharedPreferences(sharedPrefName, Context.MODE_PRIVATE)
@@ -114,15 +124,25 @@ class SettingsActivity: Activity() {
             (currentSensor[IDX_SWITCH] as Switch).isChecked = sensorEnabled
             if (entry.key != SensorType.TYPE_GNSS) {
                 (currentSensor[IDX_SEEKBAR] as SeekBar).isEnabled = sensorEnabled
+
                 (currentSensor[IDX_SEEKBAR] as SeekBar).progress = sensorFrequencyIndex
             }
-            (currentSensor[IDX_TEXTVIEW] as TextView).text = "${progressToFrequency[sensorFrequencyIndex]} Hz"
+
+
+            val progressHz = progressToFrequency[sensorFrequencyIndex]
+            if (progressHz == 0) {
+                (currentSensor[IDX_TEXTVIEW] as TextView).text = infinitySymbol
+            } else {
+                (currentSensor[IDX_TEXTVIEW] as TextView).text = "$progressHz Hz"
+            }
+
+
         }
 
         // Define a common seekbar listener
-        val seekBarChangeListener = object: SeekBar.OnSeekBarChangeListener {
+        seekBarChangeListener = object: SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                val infinitySymbol = "\u221E"
+
                 val textView: TextView? =
                     sensorsComponents.entries.find { it.value[IDX_SEEKBAR] == seekBar }?.value?.get(
                         2
@@ -144,7 +164,7 @@ class SettingsActivity: Activity() {
         }
 
         // Define a common switch listener
-        val switchCheckedChangeListener = CompoundButton.OnCheckedChangeListener { buttonView, isChecked ->
+        switchCheckedChangeListener = CompoundButton.OnCheckedChangeListener { buttonView, isChecked ->
             if (buttonView is Switch) {
                 val seekBar: SeekBar? =
                     sensorsComponents.entries.find { it.value[0] == buttonView }?.value?.get(1) as? SeekBar
@@ -203,116 +223,13 @@ class SettingsActivity: Activity() {
             saveDefaultSettings()
         }
 
-        val channelClient = Wearable.getChannelClient(applicationContext)
-        channelClient.registerChannelCallback(object: ChannelClient.ChannelCallback() {
-            override fun onChannelOpened(channel: ChannelClient.Channel) {
-                val shortPath = "/storage/emulated/0/Download/setting_app_received_${
-                    LocalDateTime.now().format(
-                        DateTimeFormatter.ofPattern("yyyyMMdd_HHmmssSSS")
-                    )
-                }"
-
-                val filePath = "file://${shortPath}"
-
-                val receiveTask = channelClient.receiveFile(channel, filePath.toUri(), false)
-                receiveTask.addOnCompleteListener { task ->
-                    if (task.isSuccessful) {
-                        Log.d("channel", shortPath)
-                        Toast.makeText(applicationContext, "succeed", Toast.LENGTH_SHORT).show()
-                        // Add a slight delay before reading
-                        Handler(Looper.getMainLooper()).postDelayed({
-                            extractJsonDataFromCsv(shortPath)
-                        }, 500)
-
-                    }
-                }
-            }
-        })
     }
 
+    // =============================================================================================
+    override fun onDestroy() {
+        super.onDestroy()
 
-    fun reflectJsonDataToWatch(jsonData: JSONObject) {
-        val keys = jsonData.keys();
-        while (keys.hasNext()) {
-            val key: String = keys.next()
-            var senorKey: SensorType = SensorType.TYPE_GNSS
-            when (key) {
-                "GNSS" -> sensorsComponents[SensorType.TYPE_GNSS]?.let {
-                    (it[0] as Switch).isChecked = jsonData.getJSONObject(key).getBoolean("switch")
-                }
-
-                "IMU" -> senorKey = SensorType.TYPE_IMU
-                "PSR" -> senorKey = SensorType.TYPE_PRESSURE
-                "STEPS" -> senorKey = SensorType.TYPE_STEPS
-                "ECG" -> senorKey = SensorType.TYPE_SPECIFIC_ECG
-                "PPG" -> senorKey = SensorType.TYPE_SPECIFIC_PPG
-                "GSR" -> senorKey = SensorType.TYPE_SPECIFIC_GSR
-            }
-            if (senorKey != SensorType.TYPE_GNSS) {
-                sensorsComponents[senorKey]?.let {
-                    val processValue = jsonData.getJSONObject(key).getInt("value")
-                    Log.d("shared1", processValue.toString())
-                    Log.d("shared1", frequencyToProgress[processValue].toString())
-                    (it[0] as Switch).isChecked = jsonData.getJSONObject(key).getBoolean("switch")
-                    (it[1] as SeekBar).isEnabled = jsonData.getJSONObject(key).getBoolean("switch")
-                    (it[1] as SeekBar).progress = frequencyToProgress[processValue] ?: 0
-                    (it[2] as TextView).text = "${processValue.toString()} Hz"
-                }
-            }
-
-
-        }
-
-    }
-
-    fun extractJsonDataFromCsv(filePath: String): JSONObject? {
-        Thread.sleep(100)
-        val jsonTag = "JSON_DATA_START"
-        val file = File(filePath)
-        var jsonData: JSONObject? = null
-
-        if (!file.exists()) {
-            Log.e("channel", "File does not exist")
-            return null
-        }
-
-
-        val fileContents = try {
-            BufferedReader(FileReader(file)).use { it.readText() }
-        } catch (e: IOException) {
-            Log.e("channel", "Error reading file: ${e.message}")
-            e.printStackTrace()
-            return null
-
-        }
-
-        Log.d("channel", "File contents: $fileContents")
-
-        if (fileContents.isBlank()) {
-            Log.e("channel", "File is empty or could not be read")
-
-        } else {
-            val jsonStartIndex = fileContents.indexOf(jsonTag)
-            if (jsonStartIndex == -1) {
-                Log.e("channel", "JSON_DATA_START tag not found in file")
-
-            } else {
-                val jsonDataString = fileContents.substring(jsonStartIndex + "JSON_DATA_START".length)
-                Log.e("channel", jsonDataString)
-                try {
-                    jsonData = JSONObject(jsonDataString)
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                }
-            }
-        }
-        if (file.delete()) {
-            Log.d("channel", "File deleted successfully")
-        } else {
-            Log.e("channel", "Failed to delete file")
-        }
-        jsonData?.let { reflectJsonDataToWatch(it) }
-        return jsonData
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(updateReceiver)
     }
 
 
@@ -393,10 +310,10 @@ class SettingsActivity: Activity() {
         Toast.makeText(applicationContext, "Default settings saved.", Toast.LENGTH_SHORT).show()
     }
 
-    fun updateUIFromPreferences(context: Context) {
-        val sharedPreferences = context.getSharedPreferences("DefaultSettings", Context.MODE_PRIVATE)
-        val progressToFrequency = arrayOf(1, 5, 10, 50, 100, 200, 0)
+    // =============================================================================================
 
+    private fun refreshUIFromPreferences() {
+        // Map sensor types to their shared preferences
         val sensorsInit: Map<SensorType, Pair<Boolean, Int>> = mapOf(
             SensorType.TYPE_GNSS to loadPreference(sharedPreferences, "GNSS"),
             SensorType.TYPE_IMU to loadPreference(sharedPreferences, "IMU"),
@@ -407,39 +324,66 @@ class SettingsActivity: Activity() {
             SensorType.TYPE_SPECIFIC_GSR to loadPreference(sharedPreferences, "GSR")
         )
 
-        sensorsInit.forEach { (type, value) ->
-            sensorsComponents[type]?.let { components ->
-                val (isSwitchOn, frequencyIndex) = value
+        Log.d("SettingsActivity", "${sensorsInit[SensorType.TYPE_IMU]}")
 
-                // Update switch state
+        // Update UI for each sensor
+        sensorsInit.forEach { (sensorType, values) ->
+            sensorsComponents[sensorType]?.let { components ->
+                val (isSwitchOn, frequencyIndex) = values
+
+                // Temporarily disable listeners to avoid triggering updates while syncing the UI
+                (components[IDX_SWITCH] as Switch).setOnCheckedChangeListener(null)
+                if (sensorType != SensorType.TYPE_GNSS) {
+                    (components[IDX_SEEKBAR] as SeekBar).setOnSeekBarChangeListener(null)
+                }
+
+                // Update UI components
                 (components[IDX_SWITCH] as Switch).isChecked = isSwitchOn
 
-                // Update seek bar and text view if applicable
-                if (type != SensorType.TYPE_GNSS) {
+                if (sensorType != SensorType.TYPE_GNSS) {
                     val seekBar = components[IDX_SEEKBAR] as SeekBar
                     val textView = components[IDX_TEXTVIEW] as TextView
 
                     seekBar.isEnabled = isSwitchOn
                     seekBar.progress = frequencyIndex
-                    textView.text = "${progressToFrequency[frequencyIndex]} Hz"
+
+                    val progressHz = progressToFrequency[frequencyIndex]
+
+                    if (progressHz == 0) {
+                        textView.text = infinitySymbol
+                    } else {
+                        textView.text = "$progressHz Hz"
+                    }
+                }
+
+                // Re-enable listeners after updating UI
+                (components[IDX_SWITCH] as Switch).setOnCheckedChangeListener(switchCheckedChangeListener)
+                if (sensorType != SensorType.TYPE_GNSS) {
+                    (components[IDX_SEEKBAR] as SeekBar).setOnSeekBarChangeListener(seekBarChangeListener)
                 }
             }
         }
+
+        Log.d("SettingsActivity", "UI updated from shared preferences.")
     }
 
+
+    // =============================================================================================
+
     private fun loadPreference(sharedPreferences: SharedPreferences, key: String): Pair<Boolean, Int> {
-        val jsonString = sharedPreferences.getString(key, null) ?: return Pair(false, 0)
+        val jsonString = sharedPreferences.getString(key, null) ?: return Pair(false, 1)
         val type: Type = object: TypeToken<List<Any>>() {}.type
 
         val settings: List<Any> = Gson().fromJson(jsonString, type)
         val isSwitchOn = settings[0] as Boolean
-        val frequencyIndex = settings[1] as Int
+        val frequencyIndex = (settings[1] as Double).toInt()
 
         return Pair(isSwitchOn, frequencyIndex)
     }
 
 
     // =============================================================================================
+
     companion object {
         fun processSettingsJson(context: Context, jsonData: JSONObject) {
             val sharedPreferences = context.getSharedPreferences("DefaultSettings", Context.MODE_PRIVATE)
@@ -452,30 +396,26 @@ class SettingsActivity: Activity() {
                 val sensorValue: MutableList<Any?> = mutableListOf()
                 val isSwitchOn = jsonData.getJSONObject(key).getBoolean("switch")
 
-                var frequencyIndex = 0 // Default index for GNSS or any missing frequency
+                var frequencyIndex = 0
                 if (jsonData.getJSONObject(key).has("value")) {
                     val frequencyValue = jsonData.getJSONObject(key).getInt("value")
-                    frequencyIndex = frequencyToProgress[frequencyValue] ?: 0
+                    frequencyIndex = frequencyToProgress[frequencyValue] ?: 1
                 }
 
-                // Add the switch state and the frequency index
                 sensorValue.add(isSwitchOn)
                 sensorValue.add(frequencyIndex)
 
-                // Save the updated values to shared preferences
                 editor.putString(key, Gson().toJson(sensorValue))
-                Log.d("SettingsActivity", "Updated $key with values: $sensorValue")
             }
 
             editor.apply()
 
-            Log.d("SettingsActivity", "Settings successfully updated and saved to shared preferences.")
-            Toast.makeText(context, "Settings updated successfully.", Toast.LENGTH_SHORT).show()
+            Log.d("SettingsActivity", "Settings successfully processed")
 
-            // Optional: Trigger UI updates if called from SettingsActivity
-            if (context is SettingsActivity) {
-                context.updateUIFromPreferences(context)
-            }
+            val broadcastIntent = Intent("ACTION_SETTINGS_UPDATED")
+            LocalBroadcastManager.getInstance(context).sendBroadcast(broadcastIntent)
+
+
         }
     }
 
