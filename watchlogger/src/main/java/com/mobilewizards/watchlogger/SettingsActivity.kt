@@ -69,13 +69,7 @@ class SettingsActivity: Activity() {
             setResult(RESULT_OK)
             finish() // Close activity
         }
-
-        // Save current settings as default
-        val btnDefault = findViewById<Button>(R.id.button_default)
-        btnDefault.setOnClickListener {
-            saveSettings()
-        }
-
+        
         SensorSettingsHandler.initializePreferences(this)
 
         initializeSensorComponents()

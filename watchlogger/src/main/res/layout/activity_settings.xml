@@ -274,29 +274,14 @@
                 android:layout_height="2dp"
                 android:background="?android:attr/listDivider" />
 
-            <LinearLayout
-                android:layout_width="160dp"
-                android:layout_height="match_parent"
-                android:orientation="horizontal">
 
-                <Button
-                    android:id="@+id/button_save"
-                    style="@style/Widget.AppCompat.Button"
-                    android:layout_width="70dp"
-                    android:layout_height="60dp"
-                    android:text="@string/str_save"
-                    android:textSize="12sp" />
-
-                <Button
-                    android:id="@+id/button_default"
-                    android:layout_width="0dp"
-                    android:layout_height="60dp"
-                    android:layout_weight="1"
-                    android:text="@string/str_default"
-                    android:textAlignment="center"
-                    android:textSize="12sp" />
-
-            </LinearLayout>
+            <Button
+                android:id="@+id/button_save"
+                style="@style/Widget.AppCompat.Button"
+                android:layout_width="120dp"
+                android:layout_height="60dp"
+                android:text="@string/str_save"
+                android:textSize="12sp" />
 
 
         </LinearLayout>
