@@ -35,9 +35,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import androidx.core.content.FileProvider
 import androidx.core.net.toUri
-import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.gms.wearable.ChannelClient
 import com.google.android.gms.wearable.MessageEvent
@@ -58,7 +56,6 @@ import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import android.os.Parcel
 import android.os.Parcelable
-import android.telephony.SignalStrength
 
 // =================================================================================================
 
