@@ -15,7 +15,6 @@ import android.graphics.drawable.ColorDrawable
 import android.net.Uri
 import android.location.GnssStatus
 import android.location.LocationManager
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.os.Environment
 import android.os.Handler
@@ -534,14 +533,6 @@ class MainActivity: AppCompatActivity() {
         timeText.text = "$durationText"
     }
 
-    override fun onDestroy() {
-        // Remove the updateRunnable when the activity is destroyed to prevent memory leaks
-        unregisterReceiver(sensorCheckReceiver)
-        durationHandler.removeCallbacks(updateRunnableDuration)
-        unregisterReceiver(checksumReceiver)
-        unregisterReceiver(fileNameReceiver)
-        super.onDestroy()
-    }
     // =================================================================================================
 
     private fun verifyChecksum(context: Context, checkFile: File, expectedChecksum: String) {
@@ -822,6 +813,8 @@ class MainActivity: AppCompatActivity() {
         unregisterReceiver(sensorCheckReceiver)
         durationHandler.removeCallbacks(updateRunnableDuration)
         unregisterReceiver(checksumReceiver)
+        unregisterReceiver(fileNameReceiver)
+        unregisterReceiver(fileSizeReceiver)
         locationManager.unregisterGnssStatusCallback(gnssStatusCallback)
         super.onDestroy()
     }

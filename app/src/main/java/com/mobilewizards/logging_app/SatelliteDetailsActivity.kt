@@ -32,7 +32,6 @@ class SatelliteDetailsActivity : AppCompatActivity() {
         constellationType = intent.getStringExtra("CONSTELLATION_TYPE")
         satelliteList = intent.getParcelableArrayListExtra("SATELLITE_LIST") ?: mutableListOf()
 
-        // Set the activity title
         title = "Satellite details for $constellationType"
 
         if (satelliteList.isNotEmpty()) {
@@ -92,9 +91,8 @@ class SatelliteDetailsActivity : AppCompatActivity() {
 
     private fun updateSatelliteData() {
         // Fetch the latest satellite data from MainActivity
-        val updatedSatellites = MainActivity.currentSatellites.filter {
-            it.constellationType == constellationType
-        }
+        val updatedSatellites = MainActivity.currentSatellites
+            .filter { it.constellationType == constellationType }
 
         // Get the current rows' tags
         val existingRows = mutableMapOf<Int, TableRow>()
