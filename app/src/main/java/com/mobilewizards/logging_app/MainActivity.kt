@@ -122,6 +122,9 @@ class MainActivity : AppCompatActivity() {
             }
         }
     }
+    companion object {
+        var currentSatellites: List<Satellite> = emptyList()
+    }
 
 
 
@@ -593,6 +596,7 @@ class MainActivity : AppCompatActivity() {
             }
 
             showSatellites(satellites)
+            currentSatellites = satellites
         }
     }
 
