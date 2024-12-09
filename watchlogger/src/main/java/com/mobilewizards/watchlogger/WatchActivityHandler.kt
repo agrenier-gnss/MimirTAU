@@ -1,14 +1,8 @@
 package com.mobilewizards.watchlogger
 
-import java.io.File
-import com.mimir.sensors.SensorType
-
 object WatchActivityHandler {
 
-    // Variable to save the files for sending
-    private var filepaths = mutableListOf<File>()
     private var fileSendOk: Boolean = false
-    var sensorsSelected = mutableMapOf<SensorType, Pair<Boolean, Int>>()
 
     // ---------------------------------------------------------------------------------------------
 
@@ -22,16 +16,4 @@ object WatchActivityHandler {
         return fileSendOk
     }
 
-    // ---------------------------------------------------------------------------------------------
-
-    fun addFilePath(filePath: String) {
-        val newFile = File(filePath)
-        filepaths.add(newFile)
-    }
-
-    // ---------------------------------------------------------------------------------------------
-
-    fun getFilePaths(): List<File> {
-        return filepaths
-    }
 }

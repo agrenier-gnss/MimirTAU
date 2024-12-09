@@ -42,8 +42,6 @@ class SendSurveysActivity: Activity() {
     private lateinit var binding: ActivitySendSurveysBinding
     private val TAG = "watchLogger"
     private val CSV_FILE_CHANNEL_PATH = MediaStore.Downloads.EXTERNAL_CONTENT_URI
-    private var filePaths = mutableListOf<File>()
-    private var fileSendOk: Boolean = false
 
     // =============================================================================================
 
@@ -56,10 +54,6 @@ class SendSurveysActivity: Activity() {
         setContentView(binding.root)
 
         val surveyToMenuBtn = findViewById<Button>(R.id.surveyToMenuBtn)
-
-        WatchActivityHandler.getFilePaths().forEach { path ->
-            filePaths.add(path)
-        }
 
         surveyToMenuBtn.setOnClickListener {
             // back to the menu screen
@@ -364,14 +358,12 @@ class SendSurveysActivity: Activity() {
                             // isn't really an option
                             sendFileNameToPhone(tempFile.name, nodeId, context)
                             sendChecksumToPhone(checksum, nodeId, context)
-                            fileSendOk = true
-
+                            WatchActivityHandler.fileSendStatus(true)
                         } else {
                             Log.e(TAG, "Error with file sending " + task.exception.toString())
-
-                            fileSendOk = false
+                            WatchActivityHandler.fileSendStatus(false)
                         }
-                        WatchActivityHandler.fileSendStatus(fileSendOk)
+
                         val openSendInfo = Intent(applicationContext, FileSendActivity::class.java)
                         startActivity(openSendInfo)
                         finish()
