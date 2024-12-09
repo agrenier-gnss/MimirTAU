@@ -11,6 +11,7 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
+import android.util.Log
 import android.view.View
 import android.view.WindowManager
 import android.widget.Button
@@ -20,7 +21,7 @@ import androidx.core.content.ContextCompat
 import com.mimir.sensors.LoggingService
 import com.mimir.sensors.SensorType
 import com.mobilewizards.logging_app.databinding.ActivityLoggingBinding
-import com.mobilewizards.watchlogger.WatchActivityHandler
+import com.mobilewizards.watchlogger.SensorSettingsHandler
 import java.io.Serializable
 import java.util.concurrent.TimeUnit
 
@@ -164,8 +165,13 @@ class LoggingActivity: Activity() {
         logText.text = "Surveying..."
         logTimeText.visibility = View.VISIBLE
 
+
+        val sensorsSelected = SensorSettingsHandler.loadSensorValues()
+
+        Log.d("sensors", "$sensorsSelected")
+
         // Set the data to be sent to service
-        loggingIntent.putExtra("settings", WatchActivityHandler.sensorsSelected as Serializable)
+        loggingIntent.putExtra("settings", sensorsSelected as Serializable)
 
         // Start service
         ContextCompat.startForegroundService(this, loggingIntent)

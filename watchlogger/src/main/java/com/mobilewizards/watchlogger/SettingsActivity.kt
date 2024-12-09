@@ -5,7 +5,6 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import android.content.SharedPreferences
 import android.os.Bundle
 import android.util.Log
 import android.widget.Button
@@ -14,15 +13,11 @@ import android.widget.SeekBar
 import android.widget.Switch
 import android.widget.TextView
 import com.mimir.sensors.SensorType
-import com.mobilewizards.watchlogger.WatchActivityHandler
 import com.mobilewizards.logging_app.databinding.ActivitySettingsBinding
 import android.widget.Toast
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
-import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
 import org.json.JSONObject
-import java.lang.reflect.Type
-
+import com.mobilewizards.watchlogger.SensorSettingsHandler
 
 // ---------------------------------------------------------------------------------------------
 
@@ -30,17 +25,11 @@ const val IDX_SWITCH = 0
 const val IDX_SEEKBAR = 1
 const val IDX_TEXTVIEW = 2
 const val infinitySymbol = "\u221E"
-const val sharedPrefName = "DefaultSettings"
-
-val progressToFrequency = arrayOf(1, 5, 10, 50, 100, 200, 0)
-val frequencyToProgress: Map<Int, Int> =
-    progressToFrequency.mapIndexed { index, frequency -> frequency to index }.toMap()
 
 // ---------------------------------------------------------------------------------------------
 
 class SettingsActivity: Activity() {
     private lateinit var binding: ActivitySettingsBinding
-    private lateinit var sharedPreferences: SharedPreferences
 
     private lateinit var sensorsComponents: MutableMap<SensorType, MutableList<Any?>>
 
@@ -84,10 +73,10 @@ class SettingsActivity: Activity() {
         // Save current settings as default
         val btnDefault = findViewById<Button>(R.id.button_default)
         btnDefault.setOnClickListener {
-            saveDefaultSettings()
+            saveSettings()
         }
 
-        initializeSharedPreference()
+        SensorSettingsHandler.initializePreferences(this)
 
         initializeSensorComponents()
 
@@ -106,24 +95,6 @@ class SettingsActivity: Activity() {
 
         // destroy
         LocalBroadcastManager.getInstance(this).unregisterReceiver(updateReceiver)
-    }
-
-    // ---------------------------------------------------------------------------------------------
-
-    private fun initializeSharedPreference() {
-        // Initialisation values if they are not present
-        sharedPreferences = getSharedPreferences(sharedPrefName, Context.MODE_PRIVATE)
-        if (!sharedPreferences.contains("GNSS")) {
-            val editor: SharedPreferences.Editor = sharedPreferences.edit()
-            editor.putString("GNSS", Gson().toJson(mutableListOf(true, 0)))
-            editor.putString("IMU", Gson().toJson(mutableListOf(false, 2)))
-            editor.putString("PSR", Gson().toJson(mutableListOf(false, 0)))
-            editor.putString("STEPS", Gson().toJson(mutableListOf(false, 1)))
-            editor.putString("ECG", Gson().toJson(mutableListOf(false, 4)))
-            editor.putString("PPG", Gson().toJson(mutableListOf(false, 4)))
-            editor.putString("GSR", Gson().toJson(mutableListOf(false, 4)))
-            editor.apply()
-        }
     }
 
 
@@ -160,23 +131,15 @@ class SettingsActivity: Activity() {
 
 
         // Load Initialisation values from sharedPreferences to the sensor types
-        val sensorsInit: Map<SensorType, MutableList<String>> = mapOf(
-            SensorType.TYPE_GNSS to loadSharedPreference("GNSS"),
-            SensorType.TYPE_IMU to loadSharedPreference("IMU"),
-            SensorType.TYPE_PRESSURE to loadSharedPreference("PSR"),
-            SensorType.TYPE_STEPS to loadSharedPreference("STEPS"),
-            SensorType.TYPE_SPECIFIC_ECG to loadSharedPreference("ECG"),
-            SensorType.TYPE_SPECIFIC_PPG to loadSharedPreference("PPG"),
-            SensorType.TYPE_SPECIFIC_GSR to loadSharedPreference("GSR")
-        )
+        val sensorsInit = SensorSettingsHandler.loadSensorValues()
 
         // Set the initialisation values
         sensorsInit.forEach { entry ->
             val currentSensor = sensorsComponents[entry.key]!! // should never be null
 
             // The IDE says that the casts below cannot succeed, but they do so ignore that
-            val sensorEnabled = entry.value[0] as Boolean
-            val sensorFrequencyIndex = (entry.value[1] as Double).toInt()
+            val sensorEnabled = entry.value.first
+            val sensorFrequencyIndex = entry.value.second
 
             (currentSensor[IDX_SWITCH] as Switch).isChecked = sensorEnabled
             if (entry.key != SensorType.TYPE_GNSS) {
@@ -267,18 +230,8 @@ class SettingsActivity: Activity() {
 
     // ---------------------------------------------------------------------------------------------
 
-
-    private fun loadSharedPreference(key: String): MutableList<String> {
-        val jsonString = sharedPreferences.getString(key, "")
-        val type: Type = object: TypeToken<MutableList<Any>>() {}.type
-
-        return Gson().fromJson(jsonString, type) ?: mutableListOf()
-    }
-
-    // ---------------------------------------------------------------------------------------------
-
     private fun updateTextView(textView: TextView, progressIndex: Int) {
-        val progressHz = progressToFrequency[progressIndex]
+        val progressHz = SensorSettingsHandler.progressToFrequency[progressIndex]
         textView.text = if (progressHz == 0) infinitySymbol else "$progressHz Hz"
     }
 
@@ -286,96 +239,44 @@ class SettingsActivity: Activity() {
 
     private fun saveSettings() {
         sensorsComponents.forEach { entry ->
-            if (entry.key == SensorType.TYPE_GNSS) {
-                WatchActivityHandler.sensorsSelected[entry.key] = Pair(
-                    (entry.value[IDX_SWITCH] as? Switch)?.isChecked as Boolean, 1
-                )
+
+            val spkey = SensorSettingsHandler.SensorToString[entry.key]!!
+            val isChecked = (entry.value[IDX_SWITCH] as? Switch)?.isChecked as Boolean
+
+            val progress = if (entry.key == SensorType.TYPE_GNSS) {
+                0
             } else {
-                WatchActivityHandler.sensorsSelected[entry.key] = Pair(
-                    (entry.value[IDX_SWITCH] as? Switch)?.isChecked as Boolean,
-                    progressToFrequency[(entry.value[IDX_SEEKBAR] as? SeekBar)?.progress as Int]
-                )
+                (entry.value[IDX_SEEKBAR] as? SeekBar)?.progress as Int
             }
+
+            SensorSettingsHandler.saveSetting(spkey, Pair(isChecked, progress))
 
             Log.d(
-                "SettingsActivity",
-                "Settings for ${entry.key} changed to " + "${WatchActivityHandler.sensorsSelected[entry.key].toString()}."
+                "SettingsActivity", "Settings for ${entry.key} changed to ($isChecked, $progress)."
             )
         }
-        Log.d("SettingsActivity", "Settings saved.")
-    }
-
-    // ---------------------------------------------------------------------------------------------
-
-    private fun saveDefaultSettings() {
-        val editor: SharedPreferences.Editor = sharedPreferences.edit()
-        sensorsComponents.forEach { entry ->
-            var spkey = ""
-            spkey = when (entry.key) {
-                SensorType.TYPE_GNSS -> "GNSS"
-                SensorType.TYPE_IMU -> "IMU"
-                SensorType.TYPE_PRESSURE -> "PSR"
-                SensorType.TYPE_STEPS -> "STEPS"
-                SensorType.TYPE_SPECIFIC_ECG -> "ECG"
-                SensorType.TYPE_SPECIFIC_PPG -> "PPG"
-                SensorType.TYPE_SPECIFIC_GSR -> "GSR"
-                else -> {
-                    return@forEach
-                }
-            }
-            if (spkey == "GNSS") {
-                editor.putString(
-                    spkey, Gson().toJson(
-                        mutableListOf(
-                            (entry.value[IDX_SWITCH] as? Switch)?.isChecked as Boolean, 0
-                        )
-                    )
-                )
-            } else {
-                editor.putString(
-                    spkey, Gson().toJson(
-                        mutableListOf(
-                            (entry.value[IDX_SWITCH] as? Switch)?.isChecked as Boolean,
-                            (entry.value[IDX_SEEKBAR] as? SeekBar)?.progress as Int
-                        )
-                    )
-                )
-            }
-            Log.d(
-                "SettingsActivity",
-                "Default settings for ${entry.key} changed to " + "${WatchActivityHandler.sensorsSelected[entry.key].toString()}."
-            )
-        }
-        editor.apply()
         Log.d("SettingsActivity", "Default settings saved.")
-        Toast.makeText(applicationContext, "Default settings saved.", Toast.LENGTH_SHORT).show()
+        Toast.makeText(applicationContext, "settings saved.", Toast.LENGTH_SHORT).show()
     }
 
     // ---------------------------------------------------------------------------------------------
 
     companion object {
         fun processSettingsJson(context: Context, jsonData: JSONObject) {
-            val sharedPreferences = context.getSharedPreferences(sharedPrefName, Context.MODE_PRIVATE)
-            val editor: SharedPreferences.Editor = sharedPreferences.edit()
 
             // Save Json data to shared preferences file
             jsonData.keys().forEach { key ->
-                val sensorValue: MutableList<Any?> = mutableListOf()
                 val isSwitchOn = jsonData.getJSONObject(key).getBoolean("switch")
 
                 var frequencyIndex = 0
                 if (jsonData.getJSONObject(key).has("value")) {
                     val frequencyValue = jsonData.getJSONObject(key).getInt("value")
-                    frequencyIndex = frequencyToProgress[frequencyValue] ?: 1
+                    frequencyIndex = SensorSettingsHandler.frequencyToProgress[frequencyValue] ?: 1
                 }
 
-                sensorValue.add(isSwitchOn)
-                sensorValue.add(frequencyIndex)
-
-                editor.putString(key, Gson().toJson(sensorValue))
+                val sensorValue: Pair<Boolean, Int> = Pair(isSwitchOn, frequencyIndex)
+                SensorSettingsHandler.saveSetting(key, sensorValue)
             }
-
-            editor.apply()
 
             Log.d("SettingsActivity", "Settings successfully processed and saved")
 
