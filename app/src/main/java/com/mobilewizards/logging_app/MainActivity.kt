@@ -519,7 +519,7 @@ class MainActivity: AppCompatActivity() {
         synchronized(fileAccessLock) {
             if (receivedFileName != null) {
                 val downloadsDir = applicationContext.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)
-                val originalFile = File(downloadsDir, receivedFileName)
+                val originalFile = File(downloadsDir, receivedFileName!!)
                 val success = renameFile.renameTo(originalFile)
                 if (success) {
                     Log.d("fileRenameReceive", "rename success! File renamed to $receivedFileName")
@@ -674,7 +674,7 @@ class GlobalNotification: Application() {
                     val builder = StrictMode.VmPolicy.Builder()
                     StrictMode.setVmPolicy(builder.build())
                     val intent = Intent(Intent.ACTION_VIEW)
-                    val uri = Uri.parse("content://" + filePath )
+                    val uri = Uri.parse("content://" + filePath)
                     intent.setDataAndType(uri, "*/*")
                     intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                     intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -696,7 +696,7 @@ class GlobalNotification: Application() {
                     cancelBtn.setOnClickListener {
                         dialog.dismiss()
                     }
-                    Log.d("test",e.message.toString())
+                    Log.d("test", e.message.toString())
                     title.text = "File Corruption"
                     message.text = "Error in opening of this file"
                     dialog.show()

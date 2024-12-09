@@ -52,7 +52,7 @@ class SelectionActivity: Activity() {
 
         // Register the receiver to listen for settings JSON
         registerReceiver(
-            settingsJsonReceiver, IntentFilter("ACTION_RECEIVE_SETTINGS_JSON"), RECEIVER_NOT_EXPORTED
+            settingsJsonReceiver, IntentFilter("ACTION_RECEIVE_SETTINGS_JSON"), RECEIVER_EXPORTED
         )
 
         this.checkPermissions()

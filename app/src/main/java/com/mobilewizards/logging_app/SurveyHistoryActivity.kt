@@ -97,7 +97,8 @@ class SurveyHistoryActivity: AppCompatActivity() {
     private fun loadSurveys() {
         val path = applicationContext.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)?.absolutePath
         val folder = File(path.toString())
-        val surveyFiles = folder.listFiles()?.toList() ?: emptyList()
+        val surveyFiles = folder.listFiles()?.sortedByDescending { it.lastModified() } // newest first
+            ?: emptyList()
 
         surveyAdapter = SurveyAdapter(surveyFiles, ::isSwiping, gestureDetector) { file ->
             deleteSurvey(file)
