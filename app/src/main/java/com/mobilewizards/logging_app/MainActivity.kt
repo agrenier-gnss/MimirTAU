@@ -10,6 +10,7 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
+import android.graphics.Color
 import android.location.GnssStatus
 import android.location.LocationManager
 import androidx.appcompat.app.AppCompatActivity
@@ -24,6 +25,8 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
+import android.widget.LinearLayout
+import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
@@ -47,6 +50,8 @@ import java.lang.reflect.Type
 import java.security.MessageDigest
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
+import android.os.Parcel
+import android.os.Parcelable
 
 // =================================================================================================
 
@@ -75,6 +80,46 @@ class MainActivity : AppCompatActivity() {
     private lateinit var satelliteRecyclerView: RecyclerView
     private lateinit var satelliteAdapter: SatelliteAdapter
     private val satelliteList = mutableListOf<String>()
+
+    data class Satellite(
+        val svid: Int,
+        val constellationType: String,
+        val azimuth: Float,
+        val elevation: Float,
+        val tracking: Boolean
+    ) : Parcelable {
+        constructor(parcel: Parcel) : this(
+            parcel.readInt(),
+            parcel.readString() ?: "",
+            parcel.readFloat(),
+            parcel.readFloat(),
+            parcel.readByte() != 0.toByte()
+        )
+
+        override fun writeToParcel(parcel: Parcel, flags: Int) {
+            parcel.writeInt(svid)
+            parcel.writeString(constellationType)
+            parcel.writeFloat(azimuth)
+            parcel.writeFloat(elevation)
+            parcel.writeByte(if (tracking) 1 else 0)
+        }
+
+        override fun describeContents(): Int {
+            return 0
+        }
+
+        companion object CREATOR : Parcelable.Creator<Satellite> {
+            override fun createFromParcel(parcel: Parcel): Satellite {
+                return Satellite(parcel)
+            }
+
+            override fun newArray(size: Int): Array<Satellite?> {
+                return arrayOfNulls(size)
+            }
+        }
+    }
+
+
 
     // ---------------------------------------------------------------------------------------------
 
@@ -272,11 +317,6 @@ class MainActivity : AppCompatActivity() {
 
         // Initialize LocationManager for GNSS Satellite info
         locationManager = getSystemService(LOCATION_SERVICE) as LocationManager
-
-        satelliteRecyclerView = findViewById(R.id.satelliteRecyclerView)
-        satelliteRecyclerView.layoutManager = LinearLayoutManager(this)
-        satelliteAdapter = SatelliteAdapter(satelliteList)
-        satelliteRecyclerView.adapter = satelliteAdapter
 
         // Check for location permission before starting
         if (ContextCompat.checkSelfPermission(
@@ -527,7 +567,7 @@ class MainActivity : AppCompatActivity() {
         override fun onSatelliteStatusChanged(status: GnssStatus) {
             super.onSatelliteStatusChanged(status)
 
-            val satellites = mutableListOf<String>()
+            val satellites = mutableListOf<Satellite>()
             for (i in 0 until status.satelliteCount) {
                 val svid = status.getSvid(i)
                 val constellationType = getConstellationTypeName(status.getConstellationType(i))
@@ -535,18 +575,23 @@ class MainActivity : AppCompatActivity() {
                 val elevation = status.getElevationDegrees(i)
                 val tracking = status.usedInFix(i)
 
-                val satelliteInfo = "Satellite $svid - $constellationType\n" +
-                        "Azimuth: $azimuth°, Elevation: $elevation°, " +
-                        "Tracking: ${if (tracking) "Yes" else "No"}"
+                val satellite = Satellite(
+                    svid,
+                    constellationType,
+                    azimuth,
+                    elevation,
+                    tracking
+                )
 
-                satellites.add(satelliteInfo)
+                satellites.add(satellite)
             }
 
             showSatellites(satellites)
         }
     }
 
-    private fun showSatellites(satellites: List<String>) {
+    private fun showSatellites(satellites: List<Satellite>) {
+        // Clear previous list
         satelliteList.clear()
 
         val constellationCounts = mutableMapOf(
@@ -561,8 +606,8 @@ class MainActivity : AppCompatActivity() {
         )
 
         satellites.forEach { satellite ->
-            val type = constellationCounts.keys.find { satellite.contains(it) } ?: "Unknown"
-            constellationCounts[type] = constellationCounts[type]!! + 1
+            constellationCounts[satellite.constellationType] =
+                constellationCounts[satellite.constellationType]!! + 1
         }
 
         satelliteList.add("Satellites connected (${satellites.size})")
@@ -570,12 +615,42 @@ class MainActivity : AppCompatActivity() {
             if (count > 0) satelliteList.add("$type ($count)")
         }
 
-//        // Sort satellites in ascending order by SVID and add them to the list after the summary
-//        satelliteList.addAll(satellites.sortedBy {
-//            it.substringAfter("Satellite ").substringBefore(" -").toIntOrNull() ?: 0
-//        })
+        // Find the container LinearLayout
+        val container = findViewById<LinearLayout>(R.id.satelliteListContainer)
+        container.removeAllViews()
 
-        satelliteAdapter.notifyDataSetChanged()
+        // Dynamically add TextView for each constellation/summary item
+        satelliteList.forEach { satelliteSummary ->
+            val textView = TextView(this)
+            textView.text = satelliteSummary
+            textView.setTextColor(Color.WHITE)
+            textView.textSize = 16f
+            textView.setPadding(16, 16, 16, 16)
+            textView.setOnClickListener {
+                val constellationType = satelliteSummary.substringBefore(" ") // Extract constellation type
+                showSatelliteDetails(constellationType, satellites) // Show detailed info
+                Log.d("SatelliteDetails", "Constellation type: $constellationType")
+
+            }
+            container.addView(textView)
+        }
+
+        // Make the ScrollView visible
+        findViewById<ScrollView>(R.id.satelliteListScroll).visibility = View.VISIBLE
+    }
+
+    private fun showSatelliteDetails(constellationType: String, satellites: List<Satellite>) {
+        // Filter satellites by constellation type
+        val filteredSatellites = satellites.filter { it.constellationType == constellationType }
+
+        if (filteredSatellites.isNotEmpty()) {
+            val intent = Intent(this, SatelliteDetailsActivity::class.java)
+            intent.putExtra("CONSTELLATION_TYPE", constellationType) // Pass the constellation type
+            intent.putParcelableArrayListExtra("SATELLITE_LIST", ArrayList(filteredSatellites)) // Pass the filtered satellites
+            startActivity(intent)
+        } else {
+            Toast.makeText(this, "No satellites found for $constellationType", Toast.LENGTH_SHORT).show()
+        }
     }
 
 
@@ -679,23 +754,36 @@ class ChecksumListenerService : WearableListenerService() {
 
 }
 
-class SatelliteAdapter(private val satellites: List<String>) :
-    RecyclerView.Adapter<SatelliteAdapter.SatelliteViewHolder>() {
+class SatelliteAdapter(
+    private val satellites: List<String>,
+    private val onSatelliteClick: (String) -> Unit // Callback to handle click events
+) : RecyclerView.Adapter<SatelliteAdapter.SatelliteViewHolder>() {
 
+    // ViewHolder to hold the view references
     class SatelliteViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         val satelliteInfo: TextView = itemView.findViewById(R.id.satelliteInfo)
     }
 
+    // Called when a new view holder is created
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): SatelliteViewHolder {
         val view = LayoutInflater.from(parent.context)
-            .inflate(R.layout.item_satellite, parent, false)
+            .inflate(R.layout.item_satellite, parent, false) // Inflate the individual item view
         return SatelliteViewHolder(view)
     }
 
+    // Bind data to the view holder
     override fun onBindViewHolder(holder: SatelliteViewHolder, position: Int) {
-        holder.satelliteInfo.text = satellites[position]
+        val satellite = satellites[position]
+        holder.satelliteInfo.text = satellite // Set the satellite name or info
+
+        // Set the click listener on the item view
+        holder.itemView.setOnClickListener {
+            // Trigger the callback when an item is clicked
+            onSatelliteClick(satellite) // Pass the clicked satellite to the callback
+        }
     }
 
+    // Return the total number of items in the list
     override fun getItemCount(): Int {
         return satellites.size
     }
