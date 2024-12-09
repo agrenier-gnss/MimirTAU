@@ -69,7 +69,7 @@ class SettingsActivity: Activity() {
             setResult(RESULT_OK)
             finish() // Close activity
         }
-        
+
         SensorSettingsHandler.initializePreferences(this)
 
         initializeSensorComponents()
@@ -234,7 +234,6 @@ class SettingsActivity: Activity() {
     private fun saveSettings() {
         sensorsComponents.forEach { entry ->
 
-            val spkey = SensorSettingsHandler.SensorToString[entry.key]!!
             val isChecked = (entry.value[IDX_SWITCH] as? Switch)?.isChecked as Boolean
 
             val progress = if (entry.key == SensorType.TYPE_GNSS) {
@@ -243,7 +242,7 @@ class SettingsActivity: Activity() {
                 (entry.value[IDX_SEEKBAR] as? SeekBar)?.progress as Int
             }
 
-            SensorSettingsHandler.saveSetting(spkey, Pair(isChecked, progress))
+            SensorSettingsHandler.saveSetting(entry.key, Pair(isChecked, progress))
 
             Log.d(
                 "SettingsActivity", "Settings for ${entry.key} changed to ($isChecked, $progress)."
@@ -259,17 +258,18 @@ class SettingsActivity: Activity() {
         fun processSettingsJson(context: Context, jsonData: JSONObject) {
 
             // Save Json data to shared preferences file
-            jsonData.keys().forEach { key ->
-                val isSwitchOn = jsonData.getJSONObject(key).getBoolean("switch")
+            jsonData.keys().forEach { keyString ->
+                val isSwitchOn = jsonData.getJSONObject(keyString).getBoolean("switch")
 
                 var frequencyIndex = 0
-                if (jsonData.getJSONObject(key).has("value")) {
-                    val frequencyValue = jsonData.getJSONObject(key).getInt("value")
+                if (jsonData.getJSONObject(keyString).has("value")) {
+                    val frequencyValue = jsonData.getJSONObject(keyString).getInt("value")
                     frequencyIndex = SensorSettingsHandler.frequencyToProgress[frequencyValue] ?: 1
                 }
 
                 val sensorValue: Pair<Boolean, Int> = Pair(isSwitchOn, frequencyIndex)
-                SensorSettingsHandler.saveSetting(key, sensorValue)
+                val keySensor = SensorSettingsHandler.StringToSensor[keyString]!!
+                SensorSettingsHandler.saveSetting(keySensor, sensorValue)
             }
 
             Log.d("SettingsActivity", "Settings successfully processed and saved")

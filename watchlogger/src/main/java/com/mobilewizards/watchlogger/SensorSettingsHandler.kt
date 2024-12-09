@@ -74,22 +74,23 @@ object SensorSettingsHandler {
     }
 
 
-    fun saveSetting(key: String, valuePair: Pair<Boolean, Int>) {
+    fun saveSetting(key: SensorType, valuePair: Pair<Boolean, Int>) {
         val editor = sharedPreferences.edit()
 
         var enabled = valuePair.first
         var sensorValue = valuePair.second
 
-        if (key == "GNSS") {
+        if (key == SensorType.TYPE_GNSS) {
             sensorValue = 0
         }
 
+        val keyString = SensorToString[key]
         val jsonString = Gson().toJson(
             mutableListOf(
                 enabled, sensorValue
             )
         )
-        editor.putString(key, jsonString)
+        editor.putString(keyString, jsonString)
         editor.apply()
     }
 
