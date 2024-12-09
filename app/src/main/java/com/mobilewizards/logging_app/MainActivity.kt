@@ -578,13 +578,15 @@ class MainActivity : AppCompatActivity() {
                 val azimuth = status.getAzimuthDegrees(i)
                 val elevation = status.getElevationDegrees(i)
                 val tracking = status.usedInFix(i)
+                val signalStrength = status.getCn0DbHz(i)
 
                 val satellite = Satellite(
                     svid,
                     constellationType,
                     azimuth,
                     elevation,
-                    tracking
+                    tracking,
+                    signalStrength
                 )
 
                 satellites.add(satellite)
