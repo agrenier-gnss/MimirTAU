@@ -6,8 +6,7 @@
     android:id="@+id/activity_main_layout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/light_gray"
-    tools:context=".SettingsActivity">
+    android:background="@color/light_gray">
 
     <ScrollView
         android:id="@+id/scroll_id"
@@ -45,7 +44,7 @@
                 android:layout_width="220dp"
                 android:layout_height="50dp"
                 android:ems="10"
-                android:text="Sensor logging"
+                android:text="Watch logging"
                 android:textColor="@color/white"
                 android:textSize="30sp"
                 app:layout_constraintEnd_toEndOf="parent"
@@ -85,36 +84,38 @@
                 android:layout_height="wrap_content"
                 android:layout_marginEnd="16dp"
                 android:text="Default"
-                app:layout_constraintBottom_toBottomOf="@+id/button_save"
+                app:layout_constraintBottom_toBottomOf="@+id/button_control"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintHorizontal_bias="1.0"
                 app:layout_constraintStart_toEndOf="@+id/settings"
-                app:layout_constraintTop_toTopOf="@+id/button_save"
+                app:layout_constraintTop_toTopOf="@+id/button_control"
                 app:layout_constraintVertical_bias="0.0" />
 
             <Button
-                android:id="@+id/button_save"
+                android:id="@+id/button_control"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="36dp"
-                android:text="Save"
+                android:text="Send"
                 app:layout_constraintBottom_toBottomOf="@+id/settings"
                 app:layout_constraintEnd_toStartOf="@+id/button_default"
                 app:layout_constraintHorizontal_bias="0.0"
                 app:layout_constraintStart_toEndOf="@+id/settings"
                 app:layout_constraintTop_toTopOf="@+id/settings" />
 
+
             <LinearLayout
                 android:id="@+id/square_layout"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:gravity="center"
+                android:gravity="end"
                 android:orientation="vertical"
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintLeft_toLeftOf="parent"
                 app:layout_constraintRight_toRightOf="parent"
-                app:layout_constraintTop_toBottomOf="@id/settings">
+                app:layout_constraintTop_toBottomOf="@id/button_default"
+                android:layout_marginBottom="20dp">
 
             </LinearLayout>
 

@@ -1,14 +1,11 @@
 package com.mobilewizards.logging_app
 
-import android.annotation.SuppressLint
 import android.app.Activity
-import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
 import android.icu.text.SimpleDateFormat
 import android.os.Build
 import android.os.Bundle
-import android.os.Environment
 import android.provider.MediaStore
 import android.util.Log
 import android.widget.Button
@@ -18,9 +15,7 @@ import com.google.android.gms.wearable.ChannelClient
 import com.google.android.gms.wearable.Wearable
 import com.mobilewizards.logging_app.databinding.ActivitySendSurveysBinding
 import com.mobilewizards.watchlogger.WatchActivityHandler
-import java.io.BufferedReader
 import java.io.File
-import java.io.FileReader
 import java.nio.file.Files
 import java.nio.file.attribute.BasicFileAttributes
 import android.widget.ImageButton
@@ -33,6 +28,9 @@ import android.view.ViewGroup
 import android.widget.TextView
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import java.io.FileOutputStream
+import java.io.IOException
+import java.io.InputStream
 import java.security.MessageDigest
 
 
@@ -44,8 +42,6 @@ class SendSurveysActivity: Activity() {
     private lateinit var binding: ActivitySendSurveysBinding
     private val TAG = "watchLogger"
     private val CSV_FILE_CHANNEL_PATH = MediaStore.Downloads.EXTERNAL_CONTENT_URI
-    private var filePaths = mutableListOf<File>()
-    private var fileSendOk: Boolean = false
 
     // =============================================================================================
 
@@ -58,10 +54,6 @@ class SendSurveysActivity: Activity() {
         setContentView(binding.root)
 
         val surveyToMenuBtn = findViewById<Button>(R.id.surveyToMenuBtn)
-
-        WatchActivityHandler.getFilePaths().forEach { path ->
-            filePaths.add(path)
-        }
 
         surveyToMenuBtn.setOnClickListener {
             // back to the menu screen
@@ -207,88 +199,43 @@ class SendSurveysActivity: Activity() {
 
     // =============================================================================================
 
-    private fun fileSendSuccessful() {
-        fileSendOk = true
-        WatchActivityHandler.fileSendStatus(fileSendOk)
-        val openSendInfo = Intent(applicationContext, FileSendActivity::class.java)
-        startActivity(openSendInfo)
-        finish()
-    }
 
-    // =============================================================================================
+    private fun generateCsvFile(file: File): File {
+        // generates a CSV file in a temporary directory and returns the File object
 
-    private fun fileSendTerminated() {
-        fileSendOk = false
-        WatchActivityHandler.fileSendStatus(fileSendOk)
-        val openSendInfo = Intent(applicationContext, FileSendActivity::class.java)
-        startActivity(openSendInfo)
-        finish()
-    }
+        val originalName = file.nameWithoutExtension
+        val newFileName = "${originalName}_sw.csv"
+        val tempDir = applicationContext.cacheDir // app's cache directory
+        val tempFile = File(tempDir, newFileName)
 
-    // =============================================================================================
-
-    @SuppressLint("SimpleDateFormat")
-    private fun generateCsvFile(csvFile: File): String {
-        // generates the csv file and saves it into the watches' downloaded files
-
-        val dateTime = SimpleDateFormat("yyyyMMdd_HHmmssSSS").format(System.currentTimeMillis())
-
-        val fileName = "log_watch_$dateTime.csv"
-
-        val contentValues = ContentValues().apply {
-            put(MediaStore.Downloads.DISPLAY_NAME, fileName)
-            put(MediaStore.Downloads.MIME_TYPE, "text/csv")
-            put(MediaStore.Downloads.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
-        }
-
-        val uri = this.contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, contentValues)
-        var filePath = ""
-        uri?.let { mediaUri ->
-            this.contentResolver.openOutputStream(mediaUri)?.use { outputStream ->
-                // helper function for output stream
-                fun writeLine(line: String) {
-                    outputStream.write("$line\n".toByteArray())
-                }
-
-                writeLine("$COMMENT_START $fileName")
-                writeLine(COMMENT_START)
-                writeLine("$COMMENT_START Header Description:")
-                writeLine(COMMENT_START)
-                writeLine("$COMMENT_START Version: ${BuildConfig.VERSION_CODE} Platform: ${Build.VERSION.RELEASE} Manufacturer: ${Build.MANUFACTURER} Model: ${Build.MODEL}")
-                writeLine(COMMENT_START)
-
-                // Read each of the files from csvFile and send them to the output stream
-                val reader = BufferedReader(FileReader(csvFile))
-
-                writeLine("")
-                writeLine("$COMMENT_START ${csvFile.name}")
-
-                var line: String? = reader.readLine()
-                while (line != null) {
-                    writeLine(line)
-                    line = reader.readLine()
-                }
-                reader.close()
-
-                outputStream.flush()
-
-                val cursor = contentResolver.query(mediaUri, null, null, null, null)
-                cursor?.use { c ->
-                    if (c.moveToFirst()) {
-                        val columnIndex = c.getColumnIndex(MediaStore.Images.Media.DATA)
-                        if (columnIndex >= 0) {
-                            filePath = c.getString(columnIndex)
-                            // Use the file path as needed
-                            Log.d("File path", filePath)
-                        } else {
-                            Log.e("Error", "Column MediaStore.Images.Media.DATA not found.")
-                        }
-                    }
-                }
-
+        tempFile.outputStream().buffered().use { outputStream ->
+            // Helper function for writing lines to the file
+            fun writeLine(line: String) {
+                outputStream.write("$line\n".toByteArray())
             }
+
+            writeLine("$COMMENT_START $originalName")
+            writeLine(COMMENT_START)
+            writeLine("$COMMENT_START Header Description:")
+            writeLine(COMMENT_START)
+            writeLine("$COMMENT_START Version: ${BuildConfig.VERSION_CODE} Platform: ${Build.VERSION.RELEASE} Manufacturer: ${Build.MANUFACTURER} Model: ${Build.MODEL}")
+            writeLine(COMMENT_START)
+            writeLine("")
+
+            // Read the input file in chunks and write to the output file
+            file.inputStream().buffered().use { inputStream ->
+                val buffer = ByteArray(8192) // 8 KB buffer size
+                var bytesRead: Int
+                while (inputStream.read(buffer).also { bytesRead = it } != -1) {
+                    outputStream.write(buffer, 0, bytesRead)
+                }
+            }
+
+            outputStream.flush()
         }
-        return filePath
+
+        Log.d("File path", "temporary file created in ${tempFile.absolutePath}")
+        return tempFile
     }
 
 
@@ -308,8 +255,8 @@ class SendSurveysActivity: Activity() {
             // successful connection
             Log.d(TAG, "nodes found, sending file: $file")
 
-            val csvPath = generateCsvFile(file)
-            sendCsvFileToPhone(File(csvPath), nodeId, this)
+            val tempFile = generateCsvFile(file)
+            sendCsvFileToPhone(tempFile, nodeId, this)
 
         }
     }
@@ -362,70 +309,113 @@ class SendSurveysActivity: Activity() {
 
     // =============================================================================================
 
-    private fun sendCsvFileToPhone(csvFile: File, nodeId: String, context: Context) {
-        Log.d(TAG, "in sendCsvFileToPhone ${csvFile.name}")
+    private fun sendCsvFileToPhone(tempFile: File, nodeId: String, context: Context) {
+        Log.d(TAG, "in sendCsvFileToPhone ${tempFile.name}")
         // Checks if the file is found and read
-        try {
-            val bufferedReader = BufferedReader(FileReader(csvFile))
-            var line: String? = bufferedReader.readLine()
-            while (line != null) {
-                line = bufferedReader.readLine()
-            }
-            bufferedReader.close()
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
+//        try {
+//            val bufferedReader = BufferedReader(FileReader(csvFile))
+//            var line: String? = bufferedReader.readLine()
+//            while (line != null) {
+//                line = bufferedReader.readLine()
+//            }
+//            bufferedReader.close()
+//        } catch (e: Exception) {
+//            e.printStackTrace()
+//        }
 
         // Generate the checksum for the file
-        val fileData = csvFile.readBytes()
-        val checksum = generateChecksum(fileData)
+        val checksum = generateChecksum(tempFile.inputStream())
         Log.d(TAG, "File checksum: $checksum")
 
-        // Getting channelClient for sending the file
-        val channelClient = Wearable.getChannelClient(context)
-        val callback = object: ChannelClient.ChannelCallback() {
-            override fun onChannelOpened(channel: ChannelClient.Channel) {
-                Log.d(TAG, "onChannelOpened " + channel.nodeId)
-                // Send the CSV file to the phone and check if send was successful
-                channelClient.sendFile(channel, csvFile.toUri()).addOnCompleteListener { task ->
-                    if (task.isSuccessful) {
-                        WatchActivityHandler.fileSendStatus(true)
-                        sendChecksumToPhone(checksum, nodeId, context)
-                        fileSendSuccessful()
+        // Create a temporary file to hold chunks (use temporary directory)
+        val cacheFile = File(context.cacheDir, "temp_chunked_file.csv")
+
+        try {
+            // Stream file into temporary chunked file
+            FileOutputStream(cacheFile).use { outputStream ->
+                val buffer = ByteArray(262144) // 256 KB buffer
+                tempFile.inputStream().use { inputStream ->
+                    var bytesRead: Int
+                    while (inputStream.read(buffer).also { bytesRead = it } != -1) {
+                        outputStream.write(buffer, 0, bytesRead)
+                    }
+                }
+            }
+            val channelClient = Wearable.getChannelClient(context)
+            val callback = object: ChannelClient.ChannelCallback() {
+                override fun onChannelOpened(channel: ChannelClient.Channel) {
+                    Log.d(TAG, "onChannelOpened ${channel.nodeId}")
+                    val fileByteSize = tempFile.length().toString()
+
+                    // sending file size before starting to send file
+                    sendFileSizeToPhone(fileByteSize, nodeId, context)
+
+                    channelClient.sendFile(channel, cacheFile.toUri()).addOnCompleteListener { task ->
+                        if (task.isSuccessful) {
+
+                            // will display that file was sent successfully even if the checksum or file name send fail
+                            // but pausing the watchlogger for potentially a minute to see if everything was sent well
+                            // isn't really an option
+                            sendFileNameToPhone(tempFile.name, nodeId, context)
+                            sendChecksumToPhone(checksum, nodeId, context)
+                            WatchActivityHandler.fileSendStatus(true)
+                        } else {
+                            Log.e(TAG, "Error with file sending " + task.exception.toString())
+                            WatchActivityHandler.fileSendStatus(false)
+                        }
+
+                        val openSendInfo = Intent(applicationContext, FileSendActivity::class.java)
+                        startActivity(openSendInfo)
+                        finish()
                         channelClient.close(channel)
+                    }
+                }
+
+                override fun onChannelClosed(
+                    channel: ChannelClient.Channel, closeReason: Int, appSpecificErrorCode: Int
+                ) {
+                    Log.d(
+                        TAG, "Channel closed: nodeId=$nodeId, reason=$closeReason, errorCode=$appSpecificErrorCode"
+                    )
+                    Wearable.getChannelClient(applicationContext).close(channel)
+
+                    val cacheDeleted = cacheFile.delete()
+
+                    if (cacheDeleted) {
+                        Log.d(TAG, "Cache file deleted: ${tempFile.name}")
                     } else {
-                        Log.e(TAG, "Error with file sending " + task.exception.toString())
-                        WatchActivityHandler.fileSendStatus(false)
-                        fileSendTerminated()
-                        channelClient.close(channel)
+                        Log.w(TAG, "Failed to delete cache file: ${tempFile.name}")
+                    }
+
+                    val tempDeleted = tempFile.delete()
+
+                    if (tempDeleted) {
+                        Log.d(TAG, "Temporary file deleted: ${tempFile.name}")
+                    } else {
+                        Log.w(TAG, "Failed to delete temporary file: ${tempFile.name}")
                     }
                 }
             }
 
-            override fun onChannelClosed(
-                channel: ChannelClient.Channel, closeReason: Int, appSpecificErrorCode: Int
-            ) {
-                Log.d(
-                    TAG, "Channel closed: nodeId=$nodeId, reason=$closeReason, errorCode=$appSpecificErrorCode"
-                )
-                Wearable.getChannelClient(applicationContext).close(channel)
+            channelClient.registerChannelCallback(callback)
+            channelClient.openChannel(
+                nodeId, CSV_FILE_CHANNEL_PATH.toString()
+            ).addOnCompleteListener { result ->
+                Log.d(TAG, result.toString())
+                if (result.isSuccessful) {
+                    Log.d(TAG, "Channel opened: nodeId=$nodeId, path=$CSV_FILE_CHANNEL_PATH")
+                    callback.onChannelOpened(result.result)
+                } else {
+                    Log.e(
+                        TAG, "Failed to open channel: nodeId=$nodeId, path=$CSV_FILE_CHANNEL_PATH"
+                    )
+                    channelClient.unregisterChannelCallback(callback)
+                    cacheFile.delete()
+                    tempFile.delete()
+                }
             }
-        }
-
-        channelClient.registerChannelCallback(callback)
-        channelClient.openChannel(
-            nodeId, CSV_FILE_CHANNEL_PATH.toString()
-        ).addOnCompleteListener { result ->
-            Log.d(TAG, result.toString())
-            if (result.isSuccessful) {
-                Log.d(TAG, "Channel opened: nodeId=$nodeId, path=$CSV_FILE_CHANNEL_PATH")
-                callback.onChannelOpened(result.result)
-            } else {
-                Log.e(
-                    TAG, "Failed to open channel: nodeId=$nodeId, path=$CSV_FILE_CHANNEL_PATH"
-                )
-                channelClient.unregisterChannelCallback(callback)
-            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error while processing file: ${e.message}")
         }
     }
 
@@ -433,21 +423,63 @@ class SendSurveysActivity: Activity() {
 
     // generate a SHA-256 checksum for data corruption check between smartphone and watch file
     // transfer
-    private fun generateChecksum(data: ByteArray): String {
+    fun generateChecksum(inputStream: InputStream): String {
         val digest = MessageDigest.getInstance("SHA-256")
-        val hashBytes = digest.digest(data)
-        return hashBytes.joinToString("") { "%02x".format(it) }
+        val buffer = ByteArray(8192) // Adjust buffer size as needed
+        var bytesRead: Int
+
+        try {
+            while (inputStream.read(buffer).also { bytesRead = it } != -1) {
+                digest.update(buffer, 0, bytesRead)
+            }
+        } catch (e: IOException) {
+            // Handle exception
+        } finally {
+            inputStream.close()
+        }
+
+        val hashBytes = digest.digest()
+        return hashBytes.fold("") { str, it -> str + "%02x".format(it) }
     }
 
     private fun sendChecksumToPhone(checksum: String, nodeId: String, context: Context) {
         val messageClient = Wearable.getMessageClient(context)
-        val checksumPath = "$CSV_FILE_CHANNEL_PATH"
+        val checksumPath = "/checksum" // message identifier tag
 
         messageClient.sendMessage(nodeId, checksumPath, checksum.toByteArray()).addOnCompleteListener { task ->
             if (task.isSuccessful) {
-                Log.d("verifyChecksum", "Checksum sent successfully. Value: $checksum")
+                Log.d(TAG, "Checksum sent successfully. Value: $checksum")
+
             } else {
                 Log.e(TAG, "Error sending checksum: ${task.exception}")
+            }
+        }
+
+    }
+
+    private fun sendFileNameToPhone(fileName: String, nodeId: String, context: Context) {
+        val messageClient = Wearable.getMessageClient(context)
+        val filenamePath = "/file-name" // message identifier tag
+
+        messageClient.sendMessage(nodeId, filenamePath, fileName.toByteArray()).addOnCompleteListener { task ->
+            if (task.isSuccessful) {
+                Log.d(TAG, "File name sent successfully. Filename: $fileName")
+            } else {
+                Log.e(TAG, "Error sending filename: ${task.exception}")
+            }
+        }
+    }
+
+
+    private fun sendFileSizeToPhone(fileSize: String, nodeId: String, context: Context) {
+        val messageClient = Wearable.getMessageClient(context)
+        val filenamePath = "/file-size" // message identifier tag
+
+        messageClient.sendMessage(nodeId, filenamePath, fileSize.toByteArray()).addOnCompleteListener { task ->
+            if (task.isSuccessful) {
+                Log.d(TAG, "File size sent successfully. File size: $fileSize")
+            } else {
+                Log.e(TAG, "Error sending file size: ${task.exception}")
             }
         }
     }
@@ -468,6 +500,8 @@ class FilesAdapter(
     inner class FileViewHolder(view: View): RecyclerView.ViewHolder(view) {
         val fileNameTextView: TextView = view.findViewById(R.id.fileNameTextView)
         val fileCreationTimeTextView: TextView = view.findViewById(R.id.fileCreationTimeTextView)
+        val fileSizeTextView: TextView = view.findViewById(R.id.fileSizeTextView)
+
 
         // possibly add a "toDriveBtn" for sending survey to drive in the future
         val fileSendButton: ImageButton = view.findViewById(R.id.fileSendButton)
@@ -485,7 +519,7 @@ class FilesAdapter(
         val file = filesList[position]
         holder.fileNameTextView.text = file.nameWithoutExtension
         holder.fileCreationTimeTextView.text = getFileCreationTime(file)
-
+        holder.fileSizeTextView.text = getFormattedFileSize(file)
         holder.fileSendButton.setOnClickListener {
             onFileSendClick!!(file) // should never be null when this is called
         }
@@ -509,6 +543,23 @@ class FilesAdapter(
         } catch (e: Exception) {
             e.printStackTrace()
             null
+        }
+    }
+
+    private fun getFormattedFileSize(file: File): String {
+
+        val sizeInBytes = file.length() // File size in bytes
+
+        val kb = sizeInBytes / 1024.0
+        val mb = kb / 1024.0
+        val gb = mb / 1024.0
+
+        // takes the highest size category over 1
+        return when {
+            gb >= 1 -> String.format("%.1f GB", gb)
+            mb >= 1 -> String.format("%.1f MB", mb)
+            kb >= 1 -> String.format("%.1f KB", kb)
+            else -> "$sizeInBytes Bytes"
         }
     }
 
