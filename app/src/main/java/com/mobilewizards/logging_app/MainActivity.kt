@@ -82,6 +82,7 @@ class MainActivity: AppCompatActivity() {
     private val fileAccessLock = Object()
 
     private lateinit var locationManager: LocationManager
+    private val LOCATION_PERMISSION_REQUEST_CODE = 1
 
     private lateinit var satelliteRecyclerView: RecyclerView
     private lateinit var satelliteAdapter: SatelliteAdapter
@@ -485,7 +486,7 @@ class MainActivity: AppCompatActivity() {
         when (requestCode) {
 
             //location permission
-            225 -> {
+            1 or 225 -> {
                 if ((grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED)) {
                     // Permission is granted. Continue the action or workflow
                     // in your app.
@@ -693,8 +694,25 @@ class MainActivity: AppCompatActivity() {
     // =================================================================================================
 
     private fun startTrackingSatellites() {
+        // Check if the required permission is granted
+        if (ActivityCompat.checkSelfPermission(
+                this,
+                Manifest.permission.ACCESS_FINE_LOCATION
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            // Request the missing permission
+            ActivityCompat.requestPermissions(
+                this,
+                arrayOf(Manifest.permission.ACCESS_FINE_LOCATION),
+                LOCATION_PERMISSION_REQUEST_CODE
+            )
+            return
+        }
+
+        // Permission is granted; proceed with GNSS status tracking
         locationManager.registerGnssStatusCallback(gnssStatusCallback, null)
     }
+
 
     private val gnssStatusCallback = object : GnssStatus.Callback() {
         override fun onSatelliteStatusChanged(status: GnssStatus) {
