@@ -86,14 +86,16 @@ class MainActivity : AppCompatActivity() {
         val constellationType: String,
         val azimuth: Float,
         val elevation: Float,
-        val tracking: Boolean
+        val tracking: Boolean,
+        val interference: Float
     ) : Parcelable {
         constructor(parcel: Parcel) : this(
             parcel.readInt(),
             parcel.readString() ?: "",
             parcel.readFloat(),
             parcel.readFloat(),
-            parcel.readByte() != 0.toByte()
+            parcel.readByte() != 0.toByte(),
+            parcel.readFloat()
         )
 
         override fun writeToParcel(parcel: Parcel, flags: Int) {
@@ -102,6 +104,7 @@ class MainActivity : AppCompatActivity() {
             parcel.writeFloat(azimuth)
             parcel.writeFloat(elevation)
             parcel.writeByte(if (tracking) 1 else 0)
+            parcel.writeFloat(interference)
         }
 
         override fun describeContents(): Int {
@@ -574,13 +577,15 @@ class MainActivity : AppCompatActivity() {
                 val azimuth = status.getAzimuthDegrees(i)
                 val elevation = status.getElevationDegrees(i)
                 val tracking = status.usedInFix(i)
+                val interference = status.getCn0DbHz(i)
 
                 val satellite = Satellite(
                     svid,
                     constellationType,
                     azimuth,
                     elevation,
-                    tracking
+                    tracking,
+                    interference
                 )
 
                 satellites.add(satellite)

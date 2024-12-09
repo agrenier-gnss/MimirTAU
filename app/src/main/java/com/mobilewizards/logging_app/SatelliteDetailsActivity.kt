@@ -43,7 +43,7 @@ class SatelliteDetailsActivity : AppCompatActivity() {
     private fun addHeaderRow() {
         val headerRow = TableRow(this)
 
-        val headers = listOf("ID", "Elevation", "Azimuth", "Tracking")
+        val headers = listOf("ID", "C/N0", "Elevation", "Azimuth", "Tracking")
         headers.forEach { header ->
             val textView = TextView(this).apply {
                 text = header
@@ -63,6 +63,7 @@ class SatelliteDetailsActivity : AppCompatActivity() {
 
         val details = listOf(
             satellite.svid.toString(),
+            "${satellite.interference}",
             "${satellite.elevation}°",
             "${satellite.azimuth}°",
             if (satellite.tracking) "Yes" else "No"
@@ -81,4 +82,5 @@ class SatelliteDetailsActivity : AppCompatActivity() {
 
         satelliteDetailsTable.addView(satelliteRow)
     }
+
 }
