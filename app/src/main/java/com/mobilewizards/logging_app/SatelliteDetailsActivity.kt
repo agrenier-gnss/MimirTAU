@@ -11,7 +11,6 @@ class SatelliteDetailsActivity : AppCompatActivity() {
 
     private lateinit var satelliteDetailsTable: TableLayout
 
-    @SuppressLint("MissingInflatedId")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_satellite_details)
@@ -33,10 +32,6 @@ class SatelliteDetailsActivity : AppCompatActivity() {
             satelliteList.forEach { satellite ->
                 addSatelliteRow(satellite)
             }
-        } else {
-            val noDataTextView = TextView(this)
-            noDataTextView.text = "No satellite data available for $constellationType."
-            satelliteDetailsTable.addView(noDataTextView)
         }
     }
 
@@ -63,7 +58,7 @@ class SatelliteDetailsActivity : AppCompatActivity() {
 
         val details = listOf(
             satellite.svid.toString(),
-            "${satellite.interference}",
+            "${satellite.signal}",
             "${satellite.elevation}°",
             "${satellite.azimuth}°",
             if (satellite.tracking) "Yes" else "No"

@@ -52,6 +52,7 @@ import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import android.os.Parcel
 import android.os.Parcelable
+import android.telephony.SignalStrength
 
 // =================================================================================================
 
@@ -87,7 +88,7 @@ class MainActivity : AppCompatActivity() {
         val azimuth: Float,
         val elevation: Float,
         val tracking: Boolean,
-        val interference: Float
+        val signal: Float
     ) : Parcelable {
         constructor(parcel: Parcel) : this(
             parcel.readInt(),
@@ -104,7 +105,7 @@ class MainActivity : AppCompatActivity() {
             parcel.writeFloat(azimuth)
             parcel.writeFloat(elevation)
             parcel.writeByte(if (tracking) 1 else 0)
-            parcel.writeFloat(interference)
+            parcel.writeFloat(signal)
         }
 
         override fun describeContents(): Int {
@@ -577,15 +578,13 @@ class MainActivity : AppCompatActivity() {
                 val azimuth = status.getAzimuthDegrees(i)
                 val elevation = status.getElevationDegrees(i)
                 val tracking = status.usedInFix(i)
-                val interference = status.getCn0DbHz(i)
 
                 val satellite = Satellite(
                     svid,
                     constellationType,
                     azimuth,
                     elevation,
-                    tracking,
-                    interference
+                    tracking
                 )
 
                 satellites.add(satellite)
