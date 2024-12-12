@@ -69,7 +69,7 @@ class PhoneSettingPage: Fragment() {
             saveSettings()
             listener.onSaveSettings() // Close activity
         }
-        
+
 
         initializeSensorComponents()
 
@@ -240,6 +240,9 @@ class PhoneSettingPage: Fragment() {
         editor.apply()
         Log.d("SettingsActivity", "Default settings saved.")
         Toast.makeText(requireContext(), "Default settings saved.", Toast.LENGTH_SHORT).show()
+
+        // keeping the old activity handler settings up to date, just it case they are used somewhere
+        ActivityHandler.updateSensorStates()
     }
 
     // ---------------------------------------------------------------------------------------------
