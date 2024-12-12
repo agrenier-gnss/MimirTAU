@@ -15,17 +15,13 @@ import android.view.ViewGroup
 import android.widget.Button
 import android.widget.CompoundButton
 import android.widget.SeekBar
-import android.widget.Switch
 import android.widget.TableLayout
 import android.widget.TableRow
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.widget.SwitchCompat
 import androidx.fragment.app.Fragment
-import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
 import com.mimir.sensors.SensorType
-import java.lang.reflect.Type
 
 const val infinitySymbol = "\u221E"
 const val IDX_SWITCH = 0
@@ -73,20 +69,12 @@ class PhoneSettingPage: Fragment() {
             saveSettings()
             listener.onSaveSettings() // Close activity
         }
-
-        // Save current settings as default
-        val btnDefault = view.findViewById<Button>(R.id.button_default)
-        btnDefault.setOnClickListener {
-            saveDefaultSettings()
-        }
-
-
+        
 
         initializeSensorComponents()
 
         loadSharedPreferencesToUi()
 
-        saveSettings() // Save default settings
     }
 
     // ---------------------------------------------------------------------------------------------
@@ -228,38 +216,10 @@ class PhoneSettingPage: Fragment() {
         textView.text = if (progressHz == 0) infinitySymbol else "$progressHz Hz"
     }
 
-    // ---------------------------------------------------------------------------------------------
 
+    // ---------------------------------------------------------------------------------------------
 
     fun saveSettings() {
-        sensorsComponents.forEach { entry ->
-
-            val sensorString = PhoneSensorSettingsHandler.SensorToString[entry.key]
-            if (entry.key == SensorType.TYPE_GNSS) {
-                ActivityHandler.sensorsSelected[entry.key] = Pair(
-                    (entry.value[IDX_SWITCH] as? SwitchCompat)?.isChecked as Boolean, 1
-                )
-            } else {
-                ActivityHandler.sensorsSelected[entry.key] = Pair(
-                    (entry.value[IDX_SWITCH] as? SwitchCompat)?.isChecked as Boolean,
-                    PhoneSensorSettingsHandler.progressToFrequency[(entry.value[IDX_SEEKBAR] as? SeekBar)?.progress as Int]
-                )
-            }
-            // Added health sensor for LoggingService
-            ActivityHandler.sensorsSelected[SensorType.TYPE_SPECIFIC_ECG] = Pair(false, 0)
-            ActivityHandler.sensorsSelected[SensorType.TYPE_SPECIFIC_PPG] = Pair(false, 0)
-            ActivityHandler.sensorsSelected[SensorType.TYPE_SPECIFIC_GSR] = Pair(false, 0)
-            Log.d(
-                "SettingsActivity",
-                "Settings for $sensorString changed to ${ActivityHandler.sensorsSelected[entry.key].toString()}."
-            )
-        }
-        Log.d("SettingsActivity", "Settings saved.")
-    }
-
-    // ---------------------------------------------------------------------------------------------
-
-    fun saveDefaultSettings() {
         val editor: SharedPreferences.Editor = PhoneSensorSettingsHandler.sharedPreferences.edit()
 
         sensorsComponents.forEach { entry ->
