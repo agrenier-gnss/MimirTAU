@@ -1,15 +1,11 @@
 package com.mobilewizards.watchlogger
 
-
 import android.content.Context
 import android.content.SharedPreferences
-import android.widget.Switch
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import java.lang.reflect.Type
 import com.mimir.sensors.SensorType
-import com.mobilewizards.logging_app.IDX_SWITCH
-
 
 object SensorSettingsHandler {
     private const val SHARED_PREF_NAME = "DefaultSettings"
@@ -94,7 +90,7 @@ object SensorSettingsHandler {
         editor.apply()
     }
 
-    fun <T> getSetting(key: String, default: T): T {
+    private fun <T> getSetting(key: String, default: T): T {
         val jsonString = sharedPreferences.getString(key, null) ?: return default
         val type: Type = object: TypeToken<T>() {}.type
         return Gson().fromJson(jsonString, type) ?: default
