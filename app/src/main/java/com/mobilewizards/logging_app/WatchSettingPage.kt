@@ -115,7 +115,6 @@ class WatchSettingPage: Fragment() {
 
             var sensorSwitch = row.findViewById<SwitchCompat>(R.id.sensorSwitch)
             sensorSwitch.isChecked = sensorParameters[0] as Boolean
-            sensorSwitch.isEnabled = !ActivityHandler.isLogging() // Disable toggling sensor if logging is ongoing
 
             var sensorStateTextView = row.findViewById<TextView>(R.id.sensorState)
             setStateTextview(sensorSwitch.isChecked, sensorStateTextView)
@@ -125,7 +124,6 @@ class WatchSettingPage: Fragment() {
 
             sensorSwitch.setOnCheckedChangeListener { _, isChecked ->
                 setStateTextview(sensorSwitch.isChecked, sensorStateTextView)
-                ActivityHandler.setToggle(it) //toggle the status in singleton
                 if ((it == "ECG" || it == "GSR") && isChecked) {
                     val opponent: String = if (it == "ECG") "GSR" else "ECG";
                     var GSREnable: Boolean = false;
@@ -137,9 +135,6 @@ class WatchSettingPage: Fragment() {
 
                             }
                         }
-                    }
-                    if (GSREnable) {
-                        ActivityHandler.setToggle(opponent)
                     }
                 }
 
@@ -158,7 +153,6 @@ class WatchSettingPage: Fragment() {
                 val slider = row3.findViewById<SeekBar>(R.id.sensorSlider)
                 slider.max = progressToFrequency.size - 1
                 slider.progress = (sensorParameters[1] as Double).toInt() //set slider value to slider
-                slider.isEnabled = !ActivityHandler.isLogging() // Disable changing slider if logging is ongoing
 
                 val sliderValue = row3.findViewById<TextView>(R.id.sliderValue)
                 sliderValue.text =
@@ -252,11 +246,7 @@ class WatchSettingPage: Fragment() {
                     put("switch", (entry.value[IDX_SWITCH] as? SwitchCompat)?.isChecked as Boolean)
                     put("value", progressToFrequency[(entry.value[IDX_SEEKBAR] as? SeekBar)?.progress as Int])
                 })
-            }/*
-                                        // Added health sensor for LoggingService
-                                        ActivityHandler.sensorsSelected[SensorType.TYPE_SPECIFIC_ECG] = Pair(false, 0)
-                                        ActivityHandler.sensorsSelected[SensorType.TYPE_SPECIFIC_PPG] = Pair(false, 0)
-                                        ActivityHandler.sensorsSelected[SensorType.TYPE_SPECIFIC_GSR] = Pair(false, 0)*/
+            }
         }
 
         return jsonData.toString()
@@ -340,21 +330,7 @@ class WatchSettingPage: Fragment() {
                 "GSR" -> mkey = SensorType.TYPE_SPECIFIC_GSR
 
             }
-            if (entry.key == "GNSS") {
-                ActivityHandler.sensorsSelected[mkey] = Pair(
-                    (entry.value[IDX_SWITCH] as? SwitchCompat)?.isChecked as Boolean, 1
-                )
-            } else {
-                ActivityHandler.sensorsSelected[mkey] = Pair(
-                    (entry.value[IDX_SWITCH] as? SwitchCompat)?.isChecked as Boolean,
-                    progressToFrequency[(entry.value[IDX_SEEKBAR] as? SeekBar)?.progress as Int]
-                )
-            }
 
-            Log.d(
-                "SettingsActivity",
-                "Settings for ${entry.key} changed to ${ActivityHandler.sensorsSelected[mkey].toString()}."
-            )
         }
         Log.d("SettingsActivity", "Settings saved.")
     }
@@ -392,10 +368,6 @@ class WatchSettingPage: Fragment() {
                     )
                 )
             }
-            Log.d(
-                "SettingsActivity",
-                "Default settings for ${entry.key} changed to ${ActivityHandler.sensorsSelected[mkey].toString()}."
-            )
         }
         editor.apply()
         Log.d("SettingsActivity", "Default settings saved.")
