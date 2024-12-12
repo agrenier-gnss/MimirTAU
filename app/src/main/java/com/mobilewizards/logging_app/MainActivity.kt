@@ -206,6 +206,10 @@ class MainActivity: AppCompatActivity() {
 
         this.checkPermissions()
 
+        PhoneSensorSettingsHandler.initializePreferences(this)
+        sharedPreferences = PhoneSensorSettingsHandler.sharedPreferences
+
+
         // Create communication with the watch
         val channelClient = Wearable.getChannelClient(applicationContext)
         channelClient.registerChannelCallback(object: ChannelClient.ChannelCallback() {
@@ -294,27 +298,6 @@ class MainActivity: AppCompatActivity() {
             startActivity(openSettings)
         }
 
-        ActivityHandler.sensorsSelected = mutableMapOf()
-        sharedPreferences = getSharedPreferences("DefaultSettings", Context.MODE_PRIVATE)
-        if (sharedPreferences.contains("GNSS")) {
-            var mparam = loadMutableList("GNSS")
-            ActivityHandler.sensorsSelected[SensorType.TYPE_GNSS] = Pair(
-                mparam[0] as Boolean, (mparam[1] as Double).toInt()
-            )
-            mparam = loadMutableList("IMU")
-            ActivityHandler.sensorsSelected[SensorType.TYPE_IMU] = Pair(
-                mparam[0] as Boolean, (mparam[1] as Double).toInt()
-            )
-            mparam = loadMutableList("PSR")
-            ActivityHandler.sensorsSelected[SensorType.TYPE_PRESSURE] = Pair(
-                mparam[0] as Boolean, (mparam[1] as Double).toInt()
-            )
-            mparam = loadMutableList("STEPS")
-            ActivityHandler.sensorsSelected[SensorType.TYPE_STEPS] = Pair(
-                mparam[0] as Boolean, (mparam[1] as Double).toInt()
-            )
-        }
-
         // Register broadcaster
         registerReceiver(sensorCheckReceiver, IntentFilter("SENSOR_CHECK_UPDATE"), RECEIVER_NOT_EXPORTED)
     }
@@ -344,7 +327,17 @@ class MainActivity: AppCompatActivity() {
         durationHandler.postDelayed(updateRunnableDuration, 1000)
 
         // Set the data to be sent to service
-        loggingIntent.putExtra("settings", ActivityHandler.sensorsSelected as Serializable)
+
+        val phoneSettings = PhoneSensorSettingsHandler.loadSensorValues()
+
+        // Added health sensor needed for LoggingService
+        //  ---- DO NOT REMOVE ----
+        phoneSettings[SensorType.TYPE_SPECIFIC_ECG] = Pair(false, 0)
+        phoneSettings[SensorType.TYPE_SPECIFIC_PPG] = Pair(false, 0)
+        phoneSettings[SensorType.TYPE_SPECIFIC_GSR] = Pair(false, 0)
+        
+        Log.d("LoggingStarted", "actual settings: $phoneSettings")
+        loggingIntent.putExtra("settings", phoneSettings as Serializable)
 
         // Start service
         ContextCompat.startForegroundService(this, loggingIntent)

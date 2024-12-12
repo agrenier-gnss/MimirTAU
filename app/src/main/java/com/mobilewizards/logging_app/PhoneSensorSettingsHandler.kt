@@ -10,12 +10,14 @@ import com.mimir.sensors.SensorType
 object PhoneSensorSettingsHandler {
     // the settings handler for the phone specific settings
     private const val SHARED_PREF_NAME = "PhoneDefaultSettings"
-    
+
 
     const val IDX_BOOLEAN = 0
     const val IDX_VALUE = 1
 
     lateinit var sharedPreferences: SharedPreferences
+
+    // maybe add magnetometer and bluetooth in the future
     var sensors = arrayOf(
         SensorType.TYPE_GNSS,
         SensorType.TYPE_IMU,
@@ -23,6 +25,7 @@ object PhoneSensorSettingsHandler {
         SensorType.TYPE_STEPS,
     )
 
+    // maybe add magnetometer and bluetooth in the future
     var sensorStrings = arrayOf(
         "GNSS", "IMU", "PSR", "STEPS"
     )
