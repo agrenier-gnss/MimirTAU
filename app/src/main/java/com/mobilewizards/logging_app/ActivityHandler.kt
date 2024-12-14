@@ -188,6 +188,7 @@ object ActivityHandler {
 
     // ---------------------------------------------------------------------------------------------
 
+    // FIXME: use PhoneSettingsHandler  to get settings instead
     // Get info on whether the sensor will be logged or not
     fun getToggle(type: String): Boolean {
         when (type) {
@@ -203,23 +204,7 @@ object ActivityHandler {
 
     // ---------------------------------------------------------------------------------------------
 
-    // Toggle sensor status between true and false whether it will be logged or not
-    fun setToggle(tag: String) {
-        if (tag.equals("GNSS")) {
-            GNSSToggle = !GNSSToggle
-        } else if (tag.equals("IMU")) {
-            IMUToggle = !IMUToggle
-        } else if (tag.equals("Barometer")) {
-            barometerToggle = !barometerToggle
-        } else if (tag.equals("Magnetometer")) {
-            magnetometerToggle = !magnetometerToggle
-        } else if (tag.equals("Bluetooth")) {
-            BLEToggle = !BLEToggle
-        }
-    }
-
-    // ---------------------------------------------------------------------------------------------
-
+    // FIXME: use PhoneSettingsHandler  to get settings instead
     fun getFrequency(tag: String): Int {
         if (tag.equals("IMU")) {
             return IMUFrequency
@@ -231,18 +216,6 @@ object ActivityHandler {
         return 0
     }
 
-    // ---------------------------------------------------------------------------------------------
-
-    fun setFrequency(tag: String, value: Int) {
-
-        if (tag.equals("IMU")) {
-            IMUFrequency = value
-        } else if (tag.equals("Barometer")) {
-            barometerFrequency = value
-        } else if (tag.equals("Magnetometer")) {
-            magnetometerFrequency = value
-        }
-    }
 
     // ---------------------------------------------------------------------------------------------
 
