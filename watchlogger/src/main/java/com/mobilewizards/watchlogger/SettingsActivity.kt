@@ -264,7 +264,7 @@ class SettingsActivity: Activity() {
                 var frequencyIndex = 0
                 if (jsonData.getJSONObject(keyString).has("value")) {
                     val frequencyValue = jsonData.getJSONObject(keyString).getInt("value")
-                    frequencyIndex = SensorSettingsHandler.frequencyToProgress[frequencyValue] ?: 1
+                    frequencyIndex = SensorSettingsHandler.frequencyToProgress[frequencyValue] ?: 0
                 }
 
                 val sensorValue: Pair<Boolean, Int> = Pair(isSwitchOn, frequencyIndex)

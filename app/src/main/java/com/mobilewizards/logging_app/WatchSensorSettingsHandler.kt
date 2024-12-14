@@ -1,4 +1,4 @@
-package com.mobilewizards.watchlogger
+package com.mobilewizards.logging_app
 
 import android.content.Context
 import android.content.SharedPreferences
@@ -7,13 +7,14 @@ import com.google.gson.reflect.TypeToken
 import java.lang.reflect.Type
 import com.mimir.sensors.SensorType
 
-object SensorSettingsHandler {
-    private const val SHARED_PREF_NAME = "DefaultSettings"
+object WatchSensorSettingsHandler {
+    // the settings handler for the watch specific settings
+    private const val SHARED_PREF_NAME = "WatchDefaultSettings"
 
     const val IDX_BOOLEAN = 0
     const val IDX_VALUE = 1
 
-    private lateinit var sharedPreferences: SharedPreferences
+    lateinit var sharedPreferences: SharedPreferences
     var sensors = arrayOf(
         SensorType.TYPE_GNSS,
         SensorType.TYPE_IMU,
@@ -90,7 +91,7 @@ object SensorSettingsHandler {
         editor.apply()
     }
 
-    private fun <T> getSetting(key: String, default: T): T {
+    fun <T> getSetting(key: String, default: T): T {
         val jsonString = sharedPreferences.getString(key, null) ?: return default
         val type: Type = object: TypeToken<T>() {}.type
         return Gson().fromJson(jsonString, type) ?: default
