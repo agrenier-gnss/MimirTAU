@@ -15,6 +15,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.IntentFilter
 import android.widget.Toast
+import com.mobilewizards.watchlogger.SensorSettingsHandler
 import org.json.JSONObject
 
 
@@ -47,6 +48,8 @@ class SelectionActivity: Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        SensorSettingsHandler.initializePreferences(this)
         binding = ActivitySelectionBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
