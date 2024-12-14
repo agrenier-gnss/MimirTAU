@@ -30,6 +30,7 @@ const val IDX_TEXTVIEW = 2
 
 class PhoneSettingPage: Fragment() {
 
+    private val TAG = "PhoneSettings"
     private lateinit var sensorsComponents: MutableMap<SensorType, MutableList<Any?>>
 
     interface SettingsFragmentListener {
@@ -148,7 +149,7 @@ class PhoneSettingPage: Fragment() {
 
     private fun loadSharedPreferencesToUi() {
 
-        Log.d("SettingsActivity", "UI updated from shared preferences.")
+        Log.d(TAG, "UI updated from shared preferences.")
 
         // Load Initialisation values from sharedPreferences to the sensor types
         val sensorsInit = PhoneSensorSettingsHandler.loadSensorValues()
@@ -234,10 +235,10 @@ class PhoneSettingPage: Fragment() {
 
             PhoneSensorSettingsHandler.saveSetting(entry.key, Pair(isChecked, progress))
 
-            Log.d("SettingsActivity", "Settings for $sensorString changed to ($isChecked , $progress)")
+            Log.d(TAG, "Settings for $sensorString changed to ($isChecked , $progress)")
         }
         editor.apply()
-        Log.d("SettingsActivity", "Settings saved.")
+        Log.d(TAG, "Settings saved.")
         Toast.makeText(requireContext(), "Settings saved.", Toast.LENGTH_SHORT).show()
 
         // keeping the old activity handler settings up to date, just it case they are used somewhere

@@ -9,12 +9,12 @@ import com.mimir.sensors.SensorType
 
 object WatchSensorSettingsHandler {
     // the settings handler for the watch specific settings
-    private const val SHARED_PREF_NAME = "DefaultSettings"
+    private const val SHARED_PREF_NAME = "WatchDefaultSettings"
 
     const val IDX_BOOLEAN = 0
     const val IDX_VALUE = 1
 
-    private lateinit var sharedPreferences: SharedPreferences
+    lateinit var sharedPreferences: SharedPreferences
     var sensors = arrayOf(
         SensorType.TYPE_GNSS,
         SensorType.TYPE_IMU,
