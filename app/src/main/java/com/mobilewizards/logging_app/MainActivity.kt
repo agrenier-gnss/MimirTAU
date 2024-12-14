@@ -207,6 +207,7 @@ class MainActivity: AppCompatActivity() {
         this.checkPermissions()
 
         PhoneSensorSettingsHandler.initializePreferences(this)
+        WatchSensorSettingsHandler.initializePreferences(this)
         sharedPreferences = PhoneSensorSettingsHandler.sharedPreferences
 
 
@@ -335,7 +336,7 @@ class MainActivity: AppCompatActivity() {
         phoneSettings[SensorType.TYPE_SPECIFIC_ECG] = Pair(false, 0)
         phoneSettings[SensorType.TYPE_SPECIFIC_PPG] = Pair(false, 0)
         phoneSettings[SensorType.TYPE_SPECIFIC_GSR] = Pair(false, 0)
-        
+
         Log.d("LoggingStarted", "actual settings: $phoneSettings")
         loggingIntent.putExtra("settings", phoneSettings as Serializable)
 

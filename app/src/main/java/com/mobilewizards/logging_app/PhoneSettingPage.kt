@@ -70,7 +70,6 @@ class PhoneSettingPage: Fragment() {
             listener.onSaveSettings() // Close activity
         }
 
-
         initializeSensorComponents()
 
         loadSharedPreferencesToUi()
@@ -90,6 +89,9 @@ class PhoneSettingPage: Fragment() {
             val sensorString = PhoneSensorSettingsHandler.SensorToString[it]!!
             val sensorParameters = PhoneSensorSettingsHandler.getSetting(sensorString, mutableListOf(false, 0))
 
+            val sensorEnabled = sensorParameters[0] as Boolean
+            val sensorProgressIndex = (sensorParameters[1] as Double).toInt()
+
             // Inflate the layout file that contains the TableLayout
             val tableLayout = layoutInflater.inflate(R.layout.layout_presets, parentView, false)
                 .findViewById<TableLayout>(R.id.sensorSquarePreset)
@@ -98,17 +100,16 @@ class PhoneSettingPage: Fragment() {
             val sensorTitleTextView = row.findViewById<TextView>(R.id.sensorTitle)
             sensorTitleTextView.text = sensorString
 
-            var sensorSwitch = row.findViewById<SwitchCompat>(R.id.sensorSwitch)
-            sensorSwitch.isChecked = sensorParameters[0] as Boolean
-            sensorSwitch.isEnabled = !ActivityHandler.isLogging() // Disable toggling sensor if logging is ongoing
+            val sensorSwitch = row.findViewById<SwitchCompat>(R.id.sensorSwitch)
+            sensorSwitch.isChecked = sensorEnabled
 
-            var sensorStateTextView = row.findViewById<TextView>(R.id.sensorState)
+            val sensorStateTextView = row.findViewById<TextView>(R.id.sensorState)
             setStateTextview(sensorSwitch.isChecked, sensorStateTextView)
 
             val row2 = tableLayout.getChildAt(1) as TableRow
             val description = row2.findViewById<TextView>(R.id.description)
 
-            sensorSwitch.setOnCheckedChangeListener(createSwitchListener(sensorStateTextView, sensorString))
+            sensorSwitch.setOnCheckedChangeListener(createSwitchListener(sensorStateTextView))
 
             // Create the layout for each sensor
             if (it == SensorType.TYPE_GNSS) {
@@ -123,13 +124,11 @@ class PhoneSettingPage: Fragment() {
                 val slider = row3.findViewById<SeekBar>(R.id.sensorSlider)
 
                 slider.max = PhoneSensorSettingsHandler.progressToFrequency.size - 1
-                slider.progress = (sensorParameters[1] as Double).toInt() //set slider value to slider
-                slider.isEnabled = !ActivityHandler.isLogging() // Disable changing slider if logging is ongoing
-
-                val sensorProgressIndex = (sensorParameters[1] as Double).toInt()
+                slider.progress = sensorProgressIndex //set slider value to slider
+                // Disable changing slider if sensor isn't enabled
+                slider.isEnabled = sensorEnabled
 
                 val sliderValue = row3.findViewById<TextView>(R.id.sliderValue)
-
                 updateTextView(sliderValue, sensorProgressIndex)
 
                 slider.setOnSeekBarChangeListener(createSeekBarListener(sliderValue))
@@ -196,11 +195,11 @@ class PhoneSettingPage: Fragment() {
     // ---------------------------------------------------------------------------------------------
 
     private fun createSwitchListener(
-        sensorStateTextView: TextView, sensorString: String
+        sensorStateTextView: TextView
     ): CompoundButton.OnCheckedChangeListener {
         return CompoundButton.OnCheckedChangeListener { buttonView, isChecked ->
+            // change text to enabled / disabled
             setStateTextview(isChecked, sensorStateTextView) // Update the state text view
-            ActivityHandler.setToggle(sensorString) // Toggle the status in singleton
 
             // enable / disable the bar based on the switch being checked or not
             val seekBar =
@@ -235,11 +234,11 @@ class PhoneSettingPage: Fragment() {
 
             PhoneSensorSettingsHandler.saveSetting(entry.key, Pair(isChecked, progress))
 
-            Log.d("SettingsActivity", "Default settings for $sensorString changed to ($isChecked , $progress)")
+            Log.d("SettingsActivity", "Settings for $sensorString changed to ($isChecked , $progress)")
         }
         editor.apply()
-        Log.d("SettingsActivity", "Default settings saved.")
-        Toast.makeText(requireContext(), "Default settings saved.", Toast.LENGTH_SHORT).show()
+        Log.d("SettingsActivity", "Settings saved.")
+        Toast.makeText(requireContext(), "Settings saved.", Toast.LENGTH_SHORT).show()
 
         // keeping the old activity handler settings up to date, just it case they are used somewhere
         ActivityHandler.updateSensorStates()
