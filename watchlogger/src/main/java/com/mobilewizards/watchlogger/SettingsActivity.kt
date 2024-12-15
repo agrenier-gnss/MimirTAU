@@ -21,6 +21,7 @@ import com.mobilewizards.watchlogger.SensorSettingsHandler
 
 // ---------------------------------------------------------------------------------------------
 
+// ui element indexes and global symbols
 const val IDX_SWITCH = 0
 const val IDX_SEEKBAR = 1
 const val IDX_TEXTVIEW = 2
@@ -38,7 +39,9 @@ class SettingsActivity: Activity() {
 
     // ---------------------------------------------------------------------------------------------
 
+
     private val updateReceiver = object: BroadcastReceiver() {
+        // receiver for settings sent from phone
         override fun onReceive(context: Context, intent: Intent) {
             if (intent.action == "ACTION_SETTINGS_UPDATED") {
                 // refresh UI whenever settings are received from the phone
@@ -70,8 +73,10 @@ class SettingsActivity: Activity() {
             finish() // Close activity
         }
 
+        // initialize the settings handler
         SensorSettingsHandler.initializePreferences(this)
 
+        // initialize the UI component map for sensors
         initializeSensorComponents()
 
         loadSharedPreferencesToUi()
@@ -96,6 +101,8 @@ class SettingsActivity: Activity() {
 
     private fun initializeSensorComponents() {
 
+        // initialize the UI component map for sensors
+        // every sensor has enabled switch, seekbar to set HZ and text field
         sensorsComponents = mutableMapOf()
         // Setting the IDs for each components
         val sensorsIDs = mapOf(
@@ -120,6 +127,8 @@ class SettingsActivity: Activity() {
     // ---------------------------------------------------------------------------------------------
 
     private fun loadSharedPreferencesToUi() {
+
+        // Loads shared preferences for sensor settings from the file and updates the UI accordingly
 
         Log.d("SettingsActivity", "UI updated from shared preferences.")
 
@@ -187,6 +196,7 @@ class SettingsActivity: Activity() {
     private fun setupListeners() {
         // Setting listeners
         sensorsComponents.forEach { entry ->
+            // makes sure that GSR and ECG sensors arent enabled at the same time
             when (entry.key) {
                 SensorType.TYPE_SPECIFIC_ECG -> {
                     (entry.value[IDX_SWITCH] as? Switch)?.setOnCheckedChangeListener { buttonView, isChecked ->
@@ -225,6 +235,7 @@ class SettingsActivity: Activity() {
     // ---------------------------------------------------------------------------------------------
 
     private fun updateTextView(textView: TextView, progressIndex: Int) {
+        // Updates the Hz value based on the progress bar index
         val progressHz = SensorSettingsHandler.progressToFrequency[progressIndex]
         textView.text = if (progressHz == 0) infinitySymbol else "$progressHz Hz"
     }
@@ -232,6 +243,7 @@ class SettingsActivity: Activity() {
     // ---------------------------------------------------------------------------------------------
 
     private fun saveSettings() {
+        // loads the settings from the UI elements and saves them to file through the SensorSettingsHandler
         sensorsComponents.forEach { entry ->
 
             val isChecked = (entry.value[IDX_SWITCH] as? Switch)?.isChecked as Boolean
@@ -255,6 +267,7 @@ class SettingsActivity: Activity() {
     // ---------------------------------------------------------------------------------------------
 
     companion object {
+        // receives the settings JSON sent from the phone, parses it and saves it to file
         fun processSettingsJson(context: Context, jsonData: JSONObject) {
 
             // Save Json data to shared preferences file
@@ -274,6 +287,7 @@ class SettingsActivity: Activity() {
 
             Log.d("SettingsActivity", "Settings successfully processed and saved")
 
+            // broadcasts intent to update the UI to be updated with the settings file
             val broadcastIntent = Intent("ACTION_SETTINGS_UPDATED")
 
             // broadcast update to make sure UI is up to date

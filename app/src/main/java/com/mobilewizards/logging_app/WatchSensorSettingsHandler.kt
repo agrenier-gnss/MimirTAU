@@ -8,7 +8,8 @@ import java.lang.reflect.Type
 import com.mimir.sensors.SensorType
 
 object WatchSensorSettingsHandler {
-    // the settings handler for the watch specific settings
+    // handler for loading and saving watch specific settings from the settings file that are sent to the watch
+    // used whenever setting parameters are required or when setting parameters are changed
     private const val SHARED_PREF_NAME = "WatchDefaultSettings"
 
     const val IDX_BOOLEAN = 0
@@ -55,6 +56,7 @@ object WatchSensorSettingsHandler {
     }
 
     fun loadSensorValues(): MutableMap<SensorType, Pair<Boolean, Int>> {
+        // load all sensor values from the file and return them as a map
         val sensorValues = mutableMapOf<SensorType, Pair<Boolean, Int>>()
 
         sensors.forEach { sensor ->
@@ -72,6 +74,7 @@ object WatchSensorSettingsHandler {
 
 
     fun saveSetting(key: SensorType, valuePair: Pair<Boolean, Int>) {
+        // save a particular sensor setting to file
         val editor = sharedPreferences.edit()
 
         var enabled = valuePair.first
@@ -92,6 +95,7 @@ object WatchSensorSettingsHandler {
     }
 
     fun <T> getSetting(key: String, default: T): T {
+        // get setting parameters as a pair of (bool, int) in string form
         val jsonString = sharedPreferences.getString(key, null) ?: return default
         val type: Type = object: TypeToken<T>() {}.type
         return Gson().fromJson(jsonString, type) ?: default

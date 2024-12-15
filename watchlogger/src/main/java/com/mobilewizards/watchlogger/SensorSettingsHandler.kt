@@ -8,6 +8,8 @@ import java.lang.reflect.Type
 import com.mimir.sensors.SensorType
 
 object SensorSettingsHandler {
+    // handler for loading and saving sensor settings from the settings file
+    // used whenever setting parameters are required or when setting parameters are changed
     private const val SHARED_PREF_NAME = "DefaultSettings"
 
     const val IDX_BOOLEAN = 0
@@ -28,6 +30,7 @@ object SensorSettingsHandler {
         "GNSS", "IMU", "PSR", "STEPS", "ECG", "PPG", "GSR"
     )
 
+    // conversion maps
     var progressToFrequency = arrayOf(1, 5, 10, 50, 100, 200, 0)
     var frequencyToProgress: Map<Int, Int> =
         progressToFrequency.mapIndexed { index, frequency -> frequency to index }.toMap()
@@ -54,6 +57,7 @@ object SensorSettingsHandler {
     }
 
     fun loadSensorValues(): MutableMap<SensorType, Pair<Boolean, Int>> {
+        // load all sensor values from the file and return them as a map
         val sensorValues = mutableMapOf<SensorType, Pair<Boolean, Int>>()
 
         sensors.forEach { sensor ->
@@ -71,6 +75,7 @@ object SensorSettingsHandler {
 
 
     fun saveSetting(key: SensorType, valuePair: Pair<Boolean, Int>) {
+        // save a particular sensor setting to file
         val editor = sharedPreferences.edit()
 
         var enabled = valuePair.first
@@ -91,6 +96,7 @@ object SensorSettingsHandler {
     }
 
     private fun <T> getSetting(key: String, default: T): T {
+        // get setting parameters as a pair of (bool, int) in string form
         val jsonString = sharedPreferences.getString(key, null) ?: return default
         val type: Type = object: TypeToken<T>() {}.type
         return Gson().fromJson(jsonString, type) ?: default

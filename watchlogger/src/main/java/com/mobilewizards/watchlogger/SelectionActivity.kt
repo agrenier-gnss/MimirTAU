@@ -139,6 +139,7 @@ class SelectionActivity: Activity() {
 // =============================================================================================
 
 class WatchMessageListenerService: WearableListenerService() {
+    // listener for the JASON settings file sent from phone to the watch
 
     private val SETTINGS_PATH = "/watch_settings" // Path to identify settings JSON
 

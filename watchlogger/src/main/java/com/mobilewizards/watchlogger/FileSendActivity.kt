@@ -15,6 +15,7 @@ class FileSendActivity: Activity() {
 
     private lateinit var binding: ActivityFileSendBinding
 
+    // showing whether file was sent from watch to the phone successfully
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -45,6 +46,7 @@ class FileSendActivity: Activity() {
             finish()
         }, 4000)
     }
+
     override fun onBackPressed() {
         // Override the back button press to do nothing
     }

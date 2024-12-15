@@ -84,9 +84,10 @@ class WatchSettingPage: Fragment() {
             sendSettingToWatch()
         }
 
-        // Initialisation values
+        // initialize the sensor UI components
         initializeSensorComponents()
 
+        // load the settings from the file to the UI
         loadSharedPreferencesToUi()
     }
 
@@ -94,12 +95,14 @@ class WatchSettingPage: Fragment() {
 
     private fun initializeSensorComponents() {
 
+        // initialize the sensor UI components to a map from sensor type to UI component
         //create a layout for each sensor in sensorList
         sensorsComponents = mutableMapOf()
 
         val parentView = requireView().findViewById<ViewGroup>(R.id.square_layout)
         WatchSensorSettingsHandler.sensors.forEach {
 
+            // get the parameters for particular sensor from the file
             val sensorString = WatchSensorSettingsHandler.SensorToString[it]!!
             val sensorParameters = WatchSensorSettingsHandler.getSetting(sensorString, mutableListOf(false, 0))
 
@@ -123,6 +126,7 @@ class WatchSettingPage: Fragment() {
             val row2 = tableLayout.getChildAt(1) as TableRow
             val description = row2.findViewById<TextView>(R.id.description)
 
+            // listener to switch changes
             sensorSwitch.setOnCheckedChangeListener(createSwitchListener(sensorStateTextView, it))
 
             // Create the layout for each sensor
@@ -145,6 +149,7 @@ class WatchSettingPage: Fragment() {
                 val sliderValue = row3.findViewById<TextView>(R.id.sliderValue)
                 updateTextView(sliderValue, sensorProgressIndex) //set slider value to a text view
 
+                // listens to slider changes
                 slider.setOnSeekBarChangeListener(createSeekBarListener(sliderValue))
 
                 sensorsComponents[it] = mutableListOf(sensorSwitch, slider, sliderValue)
@@ -163,6 +168,7 @@ class WatchSettingPage: Fragment() {
 
     private fun loadSharedPreferencesToUi() {
 
+        // Loads shared preferences for sensor settings from the file and updates the UI accordingly
         Log.d(TAG, "UI updated from shared preferences.")
 
         // Load Initialisation values from sharedPreferences to the sensor types
@@ -253,6 +259,7 @@ class WatchSettingPage: Fragment() {
     // ---------------------------------------------------------------------------------------------
 
     private fun updateTextView(textView: TextView, progressIndex: Int) {
+        // updates the Hz text based on the slider progress index
         val progressHz = WatchSensorSettingsHandler.progressToFrequency[progressIndex]
         textView.text = if (progressHz == 0) infinitySymbol else "$progressHz Hz"
     }
@@ -261,6 +268,7 @@ class WatchSettingPage: Fragment() {
 
 
     private fun getWatchNodeId(callback: (ArrayList<String>) -> Unit) {
+        // get connected watch io for sending data
         val nodeIds = ArrayList<String>()
         Wearable.getNodeClient(requireActivity()).connectedNodes.addOnSuccessListener { nodes ->
             for (node in nodes) {
@@ -274,6 +282,7 @@ class WatchSettingPage: Fragment() {
     // ---------------------------------------------------------------------------------------------
 
     private fun generateSettingsJson(): String {
+        // generates JSON from the UI components for the sensor settings for sending them to the watch
         val jsonData = JSONObject()
         sensorsComponents.forEach { entry ->
             val sensorString = WatchSensorSettingsHandler.SensorToString[entry.key]!!
@@ -298,6 +307,7 @@ class WatchSettingPage: Fragment() {
     // ---------------------------------------------------------------------------------------------
 
     private fun sendSettingsJson(nodeId: String, context: Context) {
+        // Sends settings JSON to connected watch
         val messageClient = Wearable.getMessageClient(context)
         val watchSettingsPath = "/watch_settings" // Message identifier tag
         val settingsJsonString = generateSettingsJson()
@@ -364,6 +374,9 @@ class WatchSettingPage: Fragment() {
     // ---------------------------------------------------------------------------------------------
 
     private fun saveSettings() {
+
+        // loads the settings from the UI elements and saves them to file through the Settings handler
+        
         val editor: SharedPreferences.Editor = WatchSensorSettingsHandler.sharedPreferences.edit()
 
         sensorsComponents.forEach { entry ->

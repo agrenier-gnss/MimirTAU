@@ -71,8 +71,10 @@ class PhoneSettingPage: Fragment() {
             listener.onSaveSettings() // Close activity
         }
 
+        // initialize the sensor UI components
         initializeSensorComponents()
 
+        // load the settings from the file to the UI
         loadSharedPreferencesToUi()
 
     }
@@ -80,6 +82,9 @@ class PhoneSettingPage: Fragment() {
     // ---------------------------------------------------------------------------------------------
 
     private fun initializeSensorComponents() {
+
+        // initialize the sensor UI components to a map from sensor type to UI component
+
         //create a layout for each sensor in sensorList
         sensorsComponents = mutableMapOf()
 
@@ -87,9 +92,10 @@ class PhoneSettingPage: Fragment() {
 
         PhoneSensorSettingsHandler.sensors.forEach {
 
+            // get the parameters for particular sensor from the file
             val sensorString = PhoneSensorSettingsHandler.SensorToString[it]!!
-            val sensorParameters = PhoneSensorSettingsHandler.getSetting(sensorString, mutableListOf(false, 0))
 
+            val sensorParameters = PhoneSensorSettingsHandler.getSetting(sensorString, mutableListOf(false, 0))
             val sensorEnabled = sensorParameters[0] as Boolean
             val sensorProgressIndex = (sensorParameters[1] as Double).toInt()
 
@@ -110,6 +116,7 @@ class PhoneSettingPage: Fragment() {
             val row2 = tableLayout.getChildAt(1) as TableRow
             val description = row2.findViewById<TextView>(R.id.description)
 
+            // listener to switch changes
             sensorSwitch.setOnCheckedChangeListener(createSwitchListener(sensorStateTextView))
 
             // Create the layout for each sensor
@@ -132,6 +139,7 @@ class PhoneSettingPage: Fragment() {
                 val sliderValue = row3.findViewById<TextView>(R.id.sliderValue)
                 updateTextView(sliderValue, sensorProgressIndex)
 
+                // listens to slider changes
                 slider.setOnSeekBarChangeListener(createSeekBarListener(sliderValue))
 
                 sensorsComponents[it] = mutableListOf(sensorSwitch, slider, sliderValue)
@@ -149,6 +157,7 @@ class PhoneSettingPage: Fragment() {
 
     private fun loadSharedPreferencesToUi() {
 
+        // Loads shared preferences for sensor settings from the file and updates the UI accordingly
         Log.d(TAG, "UI updated from shared preferences.")
 
         // Load Initialisation values from sharedPreferences to the sensor types
@@ -212,6 +221,7 @@ class PhoneSettingPage: Fragment() {
     // ---------------------------------------------------------------------------------------------
 
     private fun updateTextView(textView: TextView, progressIndex: Int) {
+        // updates the Hz text based on the slider progress index
         val progressHz = PhoneSensorSettingsHandler.progressToFrequency[progressIndex]
         textView.text = if (progressHz == 0) infinitySymbol else "$progressHz Hz"
     }
@@ -219,7 +229,8 @@ class PhoneSettingPage: Fragment() {
 
     // ---------------------------------------------------------------------------------------------
 
-    fun saveSettings() {
+    private fun saveSettings() {
+        // loads the settings from the UI elements and saves them to file through the Settings handler
         val editor: SharedPreferences.Editor = PhoneSensorSettingsHandler.sharedPreferences.edit()
 
         sensorsComponents.forEach { entry ->
