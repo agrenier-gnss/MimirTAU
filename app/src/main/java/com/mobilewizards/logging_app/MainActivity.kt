@@ -46,6 +46,9 @@ import java.security.MessageDigest
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
+private const val checkMark = "\u2714"
+private const val crossMark = "\u2716"
+
 
 // =================================================================================================
 
@@ -86,13 +89,13 @@ class MainActivity: AppCompatActivity() {
                         val colorID = ContextCompat.getColor(
                             applicationContext, android.R.color.holo_green_light
                         )
-                        entry.value.text = "\u2714"
+                        entry.value.text = checkMark
                         entry.value.setTextColor(colorID)
                     } else {
                         val colorID = ContextCompat.getColor(
                             applicationContext, android.R.color.holo_red_light
                         )
-                        entry.value.text = "\u2716"
+                        entry.value.text = crossMark
                         entry.value.setTextColor(colorID)
                     }
                 }
@@ -293,7 +296,18 @@ class MainActivity: AppCompatActivity() {
         }
 
         // Register broadcaster
-        registerReceiver(sensorCheckReceiver, IntentFilter("SENSOR_CHECK_UPDATE"), RECEIVER_NOT_EXPORTED)
+        registerReceiver(sensorCheckReceiver, IntentFilter("SENSOR_CHECK_UPDATE"), RECEIVER_EXPORTED)
+    }
+
+    // ---------------------------------------------------------------------------------------------
+
+    override fun onDestroy() {
+        // Remove the updateRunnable when the activity is destroyed to prevent memory leaks
+        unregisterReceiver(sensorCheckReceiver)
+        durationHandler.removeCallbacks(updateRunnableDuration)
+        unregisterReceiver(checksumReceiver)
+        unregisterReceiver(fileNameReceiver)
+        super.onDestroy()
     }
 
     // ---------------------------------------------------------------------------------------------
@@ -322,7 +336,7 @@ class MainActivity: AppCompatActivity() {
         phoneSettings[SensorType.TYPE_SPECIFIC_PPG] = Pair(false, 0)
         phoneSettings[SensorType.TYPE_SPECIFIC_GSR] = Pair(false, 0)
 
-        Log.d("LoggingStarted", "actual settings: $phoneSettings")
+        Log.d("LoggingStarted", "Settings sent for logging: $phoneSettings")
         loggingIntent.putExtra("settings", phoneSettings as Serializable)
 
         // Start service
@@ -342,6 +356,8 @@ class MainActivity: AppCompatActivity() {
         loggingButton.animate().translationYBy(-250f).setDuration(200).start()
 
         Handler().postDelayed({ dataButton.visibility = View.VISIBLE }, 100)
+
+        disableSensorsInUi()
 
         // Stop logging service
         stopService(loggingIntent)
@@ -405,6 +421,18 @@ class MainActivity: AppCompatActivity() {
 
     // ---------------------------------------------------------------------------------------------
 
+    private fun disableSensorsInUi() {
+
+        sensorTextViewList.forEach { entry ->
+            val colorID = ContextCompat.getColor(
+                applicationContext, android.R.color.holo_red_light
+            )
+            entry.value.text = crossMark
+            entry.value.setTextColor(colorID)
+        }
+    }
+    // ---------------------------------------------------------------------------------------------
+
     private val updateRunnableDuration = object: Runnable {
         override fun run() {
             // Update the duration text every second
@@ -414,6 +442,9 @@ class MainActivity: AppCompatActivity() {
             durationHandler.postDelayed(this, 1000)
         }
     }
+
+    // ---------------------------------------------------------------------------------------------
+
 
     private fun updateDurationText() {
         // Calculate the elapsed time since the button was clicked
@@ -430,14 +461,8 @@ class MainActivity: AppCompatActivity() {
         timeText.text = "$durationText"
     }
 
-    override fun onDestroy() {
-        // Remove the updateRunnable when the activity is destroyed to prevent memory leaks
-        unregisterReceiver(sensorCheckReceiver)
-        durationHandler.removeCallbacks(updateRunnableDuration)
-        unregisterReceiver(checksumReceiver)
-        unregisterReceiver(fileNameReceiver)
-        super.onDestroy()
-    }
+
+    // ---------------------------------------------------------------------------------------------
 
     private fun verifyChecksum(context: Context, checkFile: File, expectedChecksum: String) {
         // verifies the checksum for files received from the watch based on the checksum
@@ -492,9 +517,9 @@ class MainActivity: AppCompatActivity() {
             }
 
         }
-
-
     }
+
+    // ---------------------------------------------------------------------------------------------
 
     private fun renameFile(renameFile: File) {
         // renames the file to be the same as the file name on the watch
@@ -520,6 +545,8 @@ class MainActivity: AppCompatActivity() {
             }
         }
     }
+
+    // ---------------------------------------------------------------------------------------------
 
 
     private fun waitForFileTransfer(file: File, snackbar: Snackbar, context: Context, callback: (Boolean) -> Unit) {
@@ -582,6 +609,8 @@ class MainActivity: AppCompatActivity() {
         handler.post(checkRunnable)
     }
 
+    // ---------------------------------------------------------------------------------------------
+
     fun generateChecksum(inputStream: InputStream): String {
         // gets checksum for the file received from the watch
         val digest = MessageDigest.getInstance("SHA-256")
@@ -634,6 +663,8 @@ class GlobalNotification: Application() {
             override fun onActivityDestroyed(activity: Activity) {}
         })
     }
+
+    // ---------------------------------------------------------------------------------------------
 
     fun showFileReceivedDialog(filePath: String) {
         currentActivity?.let {
@@ -696,6 +727,8 @@ class GlobalNotification: Application() {
 
         }
     }
+
+    // ---------------------------------------------------------------------------------------------
 
     fun showAlertDialog(context: Context, title: String, message: String) {
         AlertDialog.Builder(context).apply {
