@@ -57,8 +57,7 @@ class SendSurveysActivity: Activity() {
 
         surveyToMenuBtn.setOnClickListener {
             // back to the menu screen
-            val intent = Intent(this, SelectionActivity::class.java)
-            startActivity(intent)
+            finish()
         }
 
 

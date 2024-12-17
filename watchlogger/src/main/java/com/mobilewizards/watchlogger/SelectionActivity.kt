@@ -54,6 +54,7 @@ class SelectionActivity: Activity() {
         setContentView(binding.root)
 
         // Register the receiver to listen for settings JSON
+        Log.d("SelectionActivity", "receiver created")
         registerReceiver(
             settingsJsonReceiver, IntentFilter("ACTION_RECEIVE_SETTINGS_JSON"), RECEIVER_EXPORTED
         )
@@ -78,8 +79,6 @@ class SelectionActivity: Activity() {
             val openSendSurveys = Intent(this, SendSurveysActivity::class.java)
             startActivity(openSendSurveys)
         }
-
-
     }
 
     // =============================================================================================
