@@ -16,6 +16,8 @@ import com.mimir.sensors.SensorType
 import com.mobilewizards.logging_app.databinding.ActivitySettingsBinding
 import android.widget.Toast
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
+import androidx.work.WorkManager
+import com.mobilewizards.watchlogger.SchedulerManager
 import org.json.JSONObject
 import com.mobilewizards.watchlogger.SensorSettingsHandler
 
@@ -67,8 +69,28 @@ class SettingsActivity: Activity() {
 
         // Saving settings
         val btnSave = findViewById<Button>(R.id.button_save)
+        // find switch_periodic_recording
+        val togglePeriodicRecording = findViewById<Switch>(R.id.switch_periodic_recording)
+        // recover toggle
+        val sharedPreferences = getSharedPreferences("AppPreferences", MODE_PRIVATE)
+        togglePeriodicRecording.isChecked = sharedPreferences.getBoolean("isPeriodicRecordingEnabled", false)
+
         btnSave.setOnClickListener {
             saveSettings()
+            // turn on/off based on the status of toggle
+            if (togglePeriodicRecording.isChecked) {
+                SchedulerManager.schedulePeriodicLogging(this)
+                Toast.makeText(this, "Background periodic recording enabled.", Toast.LENGTH_SHORT).show()
+            } else {
+                WorkManager.getInstance(this).cancelUniqueWork("SensorLoggingWork")
+                Toast.makeText(this, "Background periodic recording disabled.", Toast.LENGTH_SHORT).show()
+            }
+
+            // save toggle status to SharedPreferences
+            val editor = sharedPreferences.edit()
+            editor.putBoolean("isPeriodicRecordingEnabled", togglePeriodicRecording.isChecked)
+            editor.apply()
+
             setResult(RESULT_OK)
             finish() // Close activity
         }
