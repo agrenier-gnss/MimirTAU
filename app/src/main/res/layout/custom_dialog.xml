@@ -44,14 +44,14 @@
             android:textColor="@android:color/black"
             app:shapeAppearance="@style/ButtonShapeAppearance" />
 
-        <Button
+ <!--       <Button
             android:id="@+id/positiveButton"
             android:layout_width="155dp"
             android:layout_height="wrap_content"
             android:layout_marginLeft="30dp"
             android:text="OK"
             app:shapeAppearance="@style/ButtonShapeAppearance"
-            android:textColor="@android:color/white" />
+            android:textColor="@android:color/white" />-->
 
     </LinearLayout>
 
