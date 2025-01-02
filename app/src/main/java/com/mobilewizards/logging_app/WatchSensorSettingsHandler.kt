@@ -1,4 +1,4 @@
-package com.mobilewizards.watchlogger
+package com.mobilewizards.logging_app
 
 import android.content.Context
 import android.content.SharedPreferences
@@ -7,15 +7,15 @@ import com.google.gson.reflect.TypeToken
 import java.lang.reflect.Type
 import com.mimir.sensors.SensorType
 
-object SensorSettingsHandler {
-    // handler for loading and saving sensor settings from the settings file
+object WatchSensorSettingsHandler {
+    // handler for loading and saving watch specific settings from the settings file that are sent to the watch
     // used whenever setting parameters are required or when setting parameters are changed
-    private const val SHARED_PREF_NAME = "DefaultSettings"
+    private const val SHARED_PREF_NAME = "WatchDefaultSettings"
 
     const val IDX_BOOLEAN = 0
     const val IDX_VALUE = 1
 
-    private lateinit var sharedPreferences: SharedPreferences
+    lateinit var sharedPreferences: SharedPreferences
     var sensors = arrayOf(
         SensorType.TYPE_GNSS,
         SensorType.TYPE_IMU,
@@ -30,7 +30,6 @@ object SensorSettingsHandler {
         "GNSS", "IMU", "PSR", "STEPS", "ECG", "PPG", "GSR"
     )
 
-    // conversion maps
     var progressToFrequency = arrayOf(1, 5, 10, 50, 100, 200, 0)
     var frequencyToProgress: Map<Int, Int> =
         progressToFrequency.mapIndexed { index, frequency -> frequency to index }.toMap()
@@ -95,7 +94,7 @@ object SensorSettingsHandler {
         editor.apply()
     }
 
-    private fun <T> getSetting(key: String, default: T): T {
+    fun <T> getSetting(key: String, default: T): T {
         // get setting parameters as a pair of (bool, int) in string form
         val jsonString = sharedPreferences.getString(key, null) ?: return default
         val type: Type = object: TypeToken<T>() {}.type

@@ -1,4 +1,4 @@
-package com.mobilewizards.watchlogger
+package com.mobilewizards.logging_app
 
 import android.content.Context
 import android.content.SharedPreferences
@@ -7,30 +7,30 @@ import com.google.gson.reflect.TypeToken
 import java.lang.reflect.Type
 import com.mimir.sensors.SensorType
 
-object SensorSettingsHandler {
-    // handler for loading and saving sensor settings from the settings file
+object PhoneSensorSettingsHandler {
+    // handler for loading and saving phone specific settings from the settings file
     // used whenever setting parameters are required or when setting parameters are changed
-    private const val SHARED_PREF_NAME = "DefaultSettings"
+    private const val SHARED_PREF_NAME = "PhoneDefaultSettings"
+
 
     const val IDX_BOOLEAN = 0
     const val IDX_VALUE = 1
 
-    private lateinit var sharedPreferences: SharedPreferences
+    lateinit var sharedPreferences: SharedPreferences
+
+    // maybe add magnetometer and bluetooth in the future
     var sensors = arrayOf(
         SensorType.TYPE_GNSS,
         SensorType.TYPE_IMU,
         SensorType.TYPE_PRESSURE,
         SensorType.TYPE_STEPS,
-        SensorType.TYPE_SPECIFIC_ECG,
-        SensorType.TYPE_SPECIFIC_PPG,
-        SensorType.TYPE_SPECIFIC_GSR
     )
 
+    // maybe add magnetometer and bluetooth in the future
     var sensorStrings = arrayOf(
-        "GNSS", "IMU", "PSR", "STEPS", "ECG", "PPG", "GSR"
+        "GNSS", "IMU", "PSR", "STEPS"
     )
 
-    // conversion maps
     var progressToFrequency = arrayOf(1, 5, 10, 50, 100, 200, 0)
     var frequencyToProgress: Map<Int, Int> =
         progressToFrequency.mapIndexed { index, frequency -> frequency to index }.toMap()
@@ -49,11 +49,9 @@ object SensorSettingsHandler {
             editor.putString("IMU", Gson().toJson(mutableListOf(false, 2)))
             editor.putString("PSR", Gson().toJson(mutableListOf(false, 0)))
             editor.putString("STEPS", Gson().toJson(mutableListOf(false, 1)))
-            editor.putString("ECG", Gson().toJson(mutableListOf(false, 4)))
-            editor.putString("PPG", Gson().toJson(mutableListOf(false, 4)))
-            editor.putString("GSR", Gson().toJson(mutableListOf(false, 4)))
             editor.apply()
         }
+
     }
 
     fun loadSensorValues(): MutableMap<SensorType, Pair<Boolean, Int>> {
@@ -95,7 +93,7 @@ object SensorSettingsHandler {
         editor.apply()
     }
 
-    private fun <T> getSetting(key: String, default: T): T {
+    fun <T> getSetting(key: String, default: T): T {
         // get setting parameters as a pair of (bool, int) in string form
         val jsonString = sharedPreferences.getString(key, null) ?: return default
         val type: Type = object: TypeToken<T>() {}.type

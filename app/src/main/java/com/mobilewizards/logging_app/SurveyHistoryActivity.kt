@@ -39,6 +39,7 @@ class SurveyHistoryActivity: AppCompatActivity() {
         setContentView(R.layout.activity_surveyhistory)
         supportActionBar?.hide()
 
+        // gesture detector for detecting swipes
         gestureDetector = GestureDetector(this, SwipeGestureListener())
 
         recyclerView = findViewById(R.id.recycler_view)
@@ -95,6 +96,7 @@ class SurveyHistoryActivity: AppCompatActivity() {
     }
 
     private fun loadSurveys() {
+        // load survey files from storage
         val path = applicationContext.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)?.absolutePath
         val folder = File(path.toString())
         val surveyFiles = folder.listFiles()?.sortedByDescending { it.lastModified() } // newest first
@@ -109,6 +111,7 @@ class SurveyHistoryActivity: AppCompatActivity() {
     }
 
     private fun deleteSurvey(file: File) {
+        // delete the file and reload surveys
         try {
             file.delete()
             loadSurveys()
@@ -180,21 +183,23 @@ class SurveyAdapter(
 
     override fun getItemCount(): Int = surveys.size
 
-    private fun formatFileSize(size: Long): String {
+    private fun formatFileSize(fileSizeInBytes: Long): String {
+        // formatted file size from bytes
         val kb = 1024
         val mb = kb * 1024
         val gb = mb * 1024
 
         return when {
 
-            size >= gb -> String.format("%.2f GB", size.toDouble() / gb)
-            size >= mb -> String.format("%.2f MB", size.toDouble() / mb)
-            size >= kb -> String.format("%.2f KB", size.toDouble() / kb)
-            else -> String.format("%d bytes", size)
+            fileSizeInBytes >= gb -> String.format("%.2f GB", fileSizeInBytes.toDouble() / gb)
+            fileSizeInBytes >= mb -> String.format("%.2f MB", fileSizeInBytes.toDouble() / mb)
+            fileSizeInBytes >= kb -> String.format("%.2f KB", fileSizeInBytes.toDouble() / kb)
+            else -> String.format("%d bytes", fileSizeInBytes)
         }
     }
 
     private fun openSurveyFile(file: File, context: Context) {
+        // try to open the survey when clicked
         try {
             val builder = StrictMode.VmPolicy.Builder()
             StrictMode.setVmPolicy(builder.build())

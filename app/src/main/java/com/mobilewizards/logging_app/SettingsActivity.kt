@@ -1,4 +1,5 @@
 package com.mobilewizards.logging_app
+
 import android.os.Bundle
 import android.widget.Button
 import android.widget.FrameLayout
@@ -7,10 +8,9 @@ import androidx.viewpager.widget.ViewPager
 import com.google.android.material.tabs.TabLayout
 
 
-class SettingsActivity : AppCompatActivity(),
-    WatchSettingPage.SettingsFragmentListener,PhoneSettingPage.SettingsFragmentListener {
-
-
+class SettingsActivity: AppCompatActivity(),
+    // split settings view for Phone specific settings and watch settings on phone
+    WatchSettingPage.SettingsFragmentListener, PhoneSettingPage.SettingsFragmentListener {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -23,16 +23,14 @@ class SettingsActivity : AppCompatActivity(),
         viewPager.adapter = adapter
 
         tabLayout.setupWithViewPager(viewPager)
-        goBackButton.setOnClickListener {onBackPressedDispatcher.onBackPressed();}
-
+        goBackButton.setOnClickListener { onBackPressedDispatcher.onBackPressed(); }
 
     }
+
     override fun onSaveSettings() {
         setResult(RESULT_OK)
         finish()
     }
-
-
 
 
 }

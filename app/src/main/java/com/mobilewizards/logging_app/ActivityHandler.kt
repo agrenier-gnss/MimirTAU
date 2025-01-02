@@ -15,12 +15,13 @@ import com.mimir.sensors.SensorsHandler
 import java.io.Serializable
 
 //this class handles logging data and log events all from one class
-object ActivityHandler{
-
-    var sensorsSelected = mutableMapOf<SensorType, Pair<Boolean, Int>>()
+object ActivityHandler {
 
     private var isLogging: Boolean = false
 
+    // FIXME: I am keeping the values here for compatibility reasons and because I am not entirely sure where they are used
+    // FIXME: but the sensor values should ALWAYS be loaded off the file using PhoneSensorSettingsHandler
+    // FIXME: the settings should always be saved to settings file when updated and loaded from settings file when used
     private var IMUFrequency: Int = 10
     private var barometerFrequency: Int = 1
     private var magnetometerFrequency: Int = 1
@@ -37,7 +38,7 @@ object ActivityHandler{
     var imuSensor = mutableListOf<MotionSensorsHandler>()
     var bleSensor = mutableListOf<BLEHandler>()
 
-    lateinit var sensorsHandler : SensorsHandler
+    lateinit var sensorsHandler: SensorsHandler
 
     // Amount of logged events
     private var IMULogs: Int = 0
@@ -51,6 +52,36 @@ object ActivityHandler{
 
     // Keeps track of logging_button state in MauveActivity
     private val buttonState = MutableLiveData<Boolean>(false)
+
+
+    fun updateSensorStates() {
+        val settings = PhoneSensorSettingsHandler.loadSensorValues()
+        val IMUsettings = settings[SensorType.TYPE_IMU]!!
+        IMUToggle = IMUsettings.first
+        IMUFrequency = IMUsettings.second
+
+        val GNSSsettings = settings[SensorType.TYPE_GNSS]!!
+        GNSSToggle = GNSSsettings.first
+
+        val barometerSettings = settings[SensorType.TYPE_PRESSURE]!!
+        barometerToggle = barometerSettings.first
+        barometerFrequency = barometerSettings.second
+
+
+        // just in case magnetometer and bluetooth are added in the future
+        val magnetometerSettings = settings[SensorType.TYPE_MAGNETIC_FIELD]
+        magnetometerSettings?.let {
+            magnetometerToggle = it.first
+            magnetometerFrequency = it.second
+        }
+
+        val bluetoothSettings = settings[SensorType.TYPE_BLUETOOTH]
+        bluetoothSettings?.let {
+            BLEToggle = it.first
+        }
+
+
+    }
 
     // ---------------------------------------------------------------------------------------------
 
@@ -73,13 +104,13 @@ object ActivityHandler{
 
     // ---------------------------------------------------------------------------------------------
 
-    fun isLogging(): Boolean{
+    fun isLogging(): Boolean {
         return isLogging
     }
 
     // ---------------------------------------------------------------------------------------------
 
-    fun startLogging(context: Context){
+    fun startLogging(context: Context) {
 
 //        val motionSensors = MotionSensorsHandler(context)
 //        val gnss = GnssHandler(context)
@@ -101,22 +132,24 @@ object ActivityHandler{
         sensorsHandler = SensorsHandler(context)
 
         // Motion sensors
-        if(getToggle("IMU")) {
-            sensorsHandler.addSensor(SensorType.TYPE_ACCELEROMETER, (1.0/IMUFrequency * 1e6).toInt())
-            sensorsHandler.addSensor(SensorType.TYPE_GYROSCOPE, (1.0/IMUFrequency * 1e6).toInt())
-            sensorsHandler.addSensor(SensorType.TYPE_ACCELEROMETER_UNCALIBRATED,(1.0/IMUFrequency * 1e6).toInt())
-            sensorsHandler.addSensor(SensorType.TYPE_GYROSCOPE_UNCALIBRATED, (1.0/IMUFrequency * 1e6).toInt())
+        if (getToggle("IMU")) {
+            sensorsHandler.addSensor(SensorType.TYPE_ACCELEROMETER, (1.0 / IMUFrequency * 1e6).toInt())
+            sensorsHandler.addSensor(SensorType.TYPE_GYROSCOPE, (1.0 / IMUFrequency * 1e6).toInt())
+            sensorsHandler.addSensor(SensorType.TYPE_ACCELEROMETER_UNCALIBRATED, (1.0 / IMUFrequency * 1e6).toInt())
+            sensorsHandler.addSensor(SensorType.TYPE_GYROSCOPE_UNCALIBRATED, (1.0 / IMUFrequency * 1e6).toInt())
         }
-        if(getToggle("Magnetometer")) {
-            sensorsHandler.addSensor(SensorType.TYPE_MAGNETIC_FIELD, (1.0/magnetometerFrequency * 1e6).toInt())
-            sensorsHandler.addSensor(SensorType.TYPE_MAGNETIC_FIELD_UNCALIBRATED, (1.0/magnetometerFrequency * 1e6).toInt())
+        if (getToggle("Magnetometer")) {
+            sensorsHandler.addSensor(SensorType.TYPE_MAGNETIC_FIELD, (1.0 / magnetometerFrequency * 1e6).toInt())
+            sensorsHandler.addSensor(
+                SensorType.TYPE_MAGNETIC_FIELD_UNCALIBRATED, (1.0 / magnetometerFrequency * 1e6).toInt()
+            )
         }
-        if(getToggle("Barometer")){
-            sensorsHandler.addSensor(SensorType.TYPE_PRESSURE, (1.0/barometerFrequency * 1e6).toInt())
+        if (getToggle("Barometer")) {
+            sensorsHandler.addSensor(SensorType.TYPE_PRESSURE, (1.0 / barometerFrequency * 1e6).toInt())
         }
 
         // GNSS Sensor
-        if(getToggle("GNSS")){
+        if (getToggle("GNSS")) {
             sensorsHandler.addSensor(SensorType.TYPE_GNSS_LOCATION)
             sensorsHandler.addSensor(SensorType.TYPE_GNSS_MEASUREMENTS)
             sensorsHandler.addSensor(SensorType.TYPE_GNSS_MESSAGES)
@@ -134,14 +167,14 @@ object ActivityHandler{
 
     // ---------------------------------------------------------------------------------------------
 
-    fun stopLogging(context: Context){
+    fun stopLogging(context: Context) {
 
 //        if (GNSSToggle) {
 //            gnssSensor[0].stopLogging(context)}
 //        if(IMUToggle || getToggle("Magnetometer") || getToggle("Barometer")){
 //            imuSensor[0].stopLogging()
 //        }
-        if(BLEToggle){
+        if (BLEToggle) {
             bleSensor[0].stopLogging()
         }
 //
@@ -155,85 +188,47 @@ object ActivityHandler{
 
     // ---------------------------------------------------------------------------------------------
 
+    // FIXME: use PhoneSettingsHandler  to get settings instead
     // Get info on whether the sensor will be logged or not
-    fun getToggle(type: String): Boolean{
-        when(type)
-        {
+    fun getToggle(type: String): Boolean {
+        when (type) {
             "IMU",
-                -> return IMUToggle
-           "Magnetometer"
-                -> return magnetometerToggle
-            "Barometer"
-                -> return barometerToggle
-            "GNSS"
-                -> return GNSSToggle
+            -> return IMUToggle
+
+            "Magnetometer" -> return magnetometerToggle
+            "Barometer" -> return barometerToggle
+            "GNSS" -> return GNSSToggle
             else -> return false
         }
     }
 
     // ---------------------------------------------------------------------------------------------
 
-    // Toggle sensor status between true and false whether it will be logged or not
-    fun setToggle(tag: String){
-        if(tag.equals("GNSS")){
-             GNSSToggle = !GNSSToggle
-        }
-        else if(tag.equals("IMU")){
-            IMUToggle = !IMUToggle
-        }
-        else if(tag.equals("Barometer")){
-            barometerToggle = !barometerToggle
-        }
-        else if(tag.equals("Magnetometer")){
-            magnetometerToggle = !magnetometerToggle
-        }
-        else if(tag.equals("Bluetooth")){
-            BLEToggle = !BLEToggle
-        }
-    }
-
-    // ---------------------------------------------------------------------------------------------
-
-    fun getFrequency(tag: String): Int{
-        if(tag.equals("IMU")){
+    // FIXME: use PhoneSettingsHandler  to get settings instead
+    fun getFrequency(tag: String): Int {
+        if (tag.equals("IMU")) {
             return IMUFrequency
-        }
-        else if(tag.equals("Barometer")){
+        } else if (tag.equals("Barometer")) {
             return barometerFrequency
-        }
-        else if(tag.equals("Magnetometer")){
+        } else if (tag.equals("Magnetometer")) {
             return magnetometerFrequency
         }
         return 0
     }
 
-    // ---------------------------------------------------------------------------------------------
-
-    fun setFrequency(tag: String, value: Int){
-
-        if(tag.equals("IMU")){
-            IMUFrequency = value
-        }
-        else if(tag.equals("Barometer")){
-            barometerFrequency = value
-        }
-        else if(tag.equals("Magnetometer")){
-            magnetometerFrequency = value
-        }
-    }
 
     // ---------------------------------------------------------------------------------------------
 
     fun getLogData(tag: String): String {
-        if(tag.equals("GNSS")) {
+        if (tag.equals("GNSS")) {
             return GNSSLogs.toString()
-        } else if(tag.equals("IMU")){
+        } else if (tag.equals("IMU")) {
             return IMULogs.toString()
-        } else if(tag.equals("Barometer")){
+        } else if (tag.equals("Barometer")) {
             return barometerLogs.toString()
-        } else if(tag.equals("Magnetometer")){
+        } else if (tag.equals("Magnetometer")) {
             return magnetometerLogs.toString()
-        } else if(tag.equals("Bluetooth")) {
+        } else if (tag.equals("Bluetooth")) {
             return BLELogs.toString()
         }
         return 0.toString()

@@ -57,8 +57,7 @@ class SendSurveysActivity: Activity() {
 
         surveyToMenuBtn.setOnClickListener {
             // back to the menu screen
-            val intent = Intent(this, SelectionActivity::class.java)
-            startActivity(intent)
+            finish()
         }
 
 
@@ -103,6 +102,7 @@ class SendSurveysActivity: Activity() {
 
     // =============================================================================================
     private fun fileSendConfirmationPopup(file: File) {
+        // popup screen for confirming file sending to the phone
         val dialogView = LayoutInflater.from(this).inflate(R.layout.file_action_dialog_confirmation, null)
         val builder = AlertDialog.Builder(this).setView(dialogView)
 
@@ -139,6 +139,7 @@ class SendSurveysActivity: Activity() {
 
 
     private fun fileDeleteConfirmationPopup(file: File, onDeletionResult: (Boolean) -> Unit) {
+        // popup screen for confirming file deletion
         val dialogView = LayoutInflater.from(this).inflate(R.layout.file_action_dialog_confirmation, null)
         val builder = AlertDialog.Builder(this).setView(dialogView)
 
@@ -181,6 +182,8 @@ class SendSurveysActivity: Activity() {
     // =============================================================================================
 
     private fun getSurveyFiles(): MutableList<File> {
+        // get the logged surveys
+
         // app file directory
         Log.d(TAG, filesDir.absolutePath)
         val appFilesDir = File(filesDir.absolutePath)
@@ -201,7 +204,7 @@ class SendSurveysActivity: Activity() {
 
 
     private fun generateCsvFile(file: File): File {
-        // generates a CSV file in a temporary directory and returns the File object
+        // generates a CSV file in a temporary directory from a survey and returns the File object
 
         val originalName = file.nameWithoutExtension
         val newFileName = "${originalName}_sw.csv"
@@ -287,6 +290,7 @@ class SendSurveysActivity: Activity() {
     // =============================================================================================
 
     private fun getPhoneNodeId(callback: (String?) -> Unit) {
+        // gets connected phone ID for data sending
         val nodeClient = Wearable.getNodeClient(applicationContext)
         nodeClient.connectedNodes.addOnSuccessListener { nodes ->
             // Filter for nearby nodes only
@@ -379,6 +383,7 @@ class SendSurveysActivity: Activity() {
                     )
                     Wearable.getChannelClient(applicationContext).close(channel)
 
+                    // delete temporary files when channel closed
                     val cacheDeleted = cacheFile.delete()
 
                     if (cacheDeleted) {
@@ -443,6 +448,7 @@ class SendSurveysActivity: Activity() {
     }
 
     private fun sendChecksumToPhone(checksum: String, nodeId: String, context: Context) {
+        // sends checksum to phone via message client
         val messageClient = Wearable.getMessageClient(context)
         val checksumPath = "/checksum" // message identifier tag
 
@@ -458,6 +464,7 @@ class SendSurveysActivity: Activity() {
     }
 
     private fun sendFileNameToPhone(fileName: String, nodeId: String, context: Context) {
+        // sends filename to phone via message client
         val messageClient = Wearable.getMessageClient(context)
         val filenamePath = "/file-name" // message identifier tag
 
@@ -472,6 +479,7 @@ class SendSurveysActivity: Activity() {
 
 
     private fun sendFileSizeToPhone(fileSize: String, nodeId: String, context: Context) {
+        // sends file size to phone via message client
         val messageClient = Wearable.getMessageClient(context)
         val filenamePath = "/file-size" // message identifier tag
 

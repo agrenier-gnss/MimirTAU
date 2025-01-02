@@ -269,11 +269,25 @@
                 android:progress="3" />
 
             <View
+                android:id="@+id/divider11"
+                android:layout_width="match_parent"
+                android:layout_height="4dp"
+                android:background="?android:attr/listDivider" />
+
+
+            <Switch
+                android:id="@+id/switch_periodic_recording"
+                android:layout_width="130dp"
+                android:layout_height="wrap_content"
+                android:text="@string/str_periodic_recording"
+                android:textColor="@color/fontWhite"
+                tools:ignore="UseSwitchCompatOrMaterialXml" />
+
+            <View
                 android:id="@+id/divider4"
                 android:layout_width="match_parent"
                 android:layout_height="2dp"
                 android:background="?android:attr/listDivider" />
-
 
             <Button
                 android:id="@+id/button_save"

@@ -1,7 +1,7 @@
 package com.mobilewizards.watchlogger
 
 object WatchActivityHandler {
-
+    // keeps track of the most recently sent file status
     private var fileSendOk: Boolean = false
 
     // ---------------------------------------------------------------------------------------------

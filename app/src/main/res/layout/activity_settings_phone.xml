@@ -78,29 +78,16 @@
                 app:shapeAppearance="@style/TextAppearance" />
 
             <Button
-                android:id="@+id/button_default"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginEnd="16dp"
-                android:text="Default"
-                app:layout_constraintBottom_toBottomOf="@+id/button_save"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintHorizontal_bias="1.0"
-                app:layout_constraintStart_toEndOf="@+id/settings"
-                app:layout_constraintTop_toTopOf="@+id/button_save"
-                app:layout_constraintVertical_bias="0.0" />
-
-            <Button
                 android:id="@+id/button_save"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="36dp"
+                android:layout_marginTop="16dp"
                 android:text="Save"
                 app:layout_constraintBottom_toBottomOf="@+id/settings"
-                app:layout_constraintEnd_toStartOf="@+id/button_default"
-                app:layout_constraintHorizontal_bias="0.0"
-                app:layout_constraintStart_toEndOf="@+id/settings"
-                app:layout_constraintTop_toTopOf="@+id/settings" />
+                app:layout_constraintTop_toTopOf="@+id/settings"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintHorizontal_bias="0.5" />
 
             <LinearLayout
                 android:id="@+id/square_layout"
@@ -116,7 +103,6 @@
                 android:layout_marginBottom="20dp">
 
             </LinearLayout>
-
 
         </androidx.constraintlayout.widget.ConstraintLayout>
     </ScrollView>

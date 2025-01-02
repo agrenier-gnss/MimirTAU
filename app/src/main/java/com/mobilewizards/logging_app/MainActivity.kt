@@ -8,7 +8,6 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
@@ -42,20 +41,21 @@ import com.google.android.gms.wearable.MessageEvent
 import com.google.android.gms.wearable.Wearable
 import com.google.android.gms.wearable.WearableListenerService
 import com.google.android.material.snackbar.Snackbar
-import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
 import com.mimir.sensors.LoggingService
 import com.mimir.sensors.SensorType
 import java.io.File
 import java.io.IOException
 import java.io.InputStream
 import java.io.Serializable
-import java.lang.reflect.Type
 import java.security.MessageDigest
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import android.os.Parcel
 import android.os.Parcelable
+
+private const val checkMark = "\u2714"
+private const val crossMark = "\u2716"
+
 
 // =================================================================================================
 
@@ -74,8 +74,6 @@ class MainActivity: AppCompatActivity() {
     private var receivedFileSize: Long? = null
 
     lateinit var loggingIntent: Intent
-
-    private lateinit var sharedPreferences: SharedPreferences
 
     private var sensorTextViewList = mutableMapOf<SensorType, TextView>()
 
@@ -137,6 +135,8 @@ class MainActivity: AppCompatActivity() {
     // ---------------------------------------------------------------------------------------------
 
     private val sensorCheckReceiver = object: BroadcastReceiver() {
+        // receives updates for sensor status every second and updates the sensor status with
+        // red X or green checkmark depending on if it's on or not
         override fun onReceive(context: Context?, intent: Intent?) {
             if (intent?.action == "SENSOR_CHECK_UPDATE") {
 
@@ -149,13 +149,13 @@ class MainActivity: AppCompatActivity() {
                         val colorID = ContextCompat.getColor(
                             applicationContext, android.R.color.holo_green_light
                         )
-                        entry.value.text = "\u2714"
+                        entry.value.text = checkMark
                         entry.value.setTextColor(colorID)
                     } else {
                         val colorID = ContextCompat.getColor(
                             applicationContext, android.R.color.holo_red_light
                         )
-                        entry.value.text = "\u2716"
+                        entry.value.text = crossMark
                         entry.value.setTextColor(colorID)
                     }
                 }
@@ -165,6 +165,7 @@ class MainActivity: AppCompatActivity() {
     // ---------------------------------------------------------------------------------------------
 
     private val checksumReceiver = object: BroadcastReceiver() {
+        // receives file checksum for the files sent from the watch
         override fun onReceive(context: Context, intent: Intent) {
             if (intent.action == "ACTION_VERIFY_CHECKSUM") {
                 Log.d("verifyChecksum", "verify checksum broadcast")
@@ -181,6 +182,7 @@ class MainActivity: AppCompatActivity() {
     // ---------------------------------------------------------------------------------------------
 
     private val fileNameReceiver = object: BroadcastReceiver() {
+        // receives filename for the files sent from the watch
         override fun onReceive(context: Context, intent: Intent) {
             Log.d("fileRenameReceive", "file rename broadcast")
             if (intent.action == "ACTION_RENAME_FILE") {
@@ -192,6 +194,7 @@ class MainActivity: AppCompatActivity() {
     // ---------------------------------------------------------------------------------------------
 
     private val fileSizeReceiver = object: BroadcastReceiver() {
+        // receives file size for the files sent from the watch
         override fun onReceive(context: Context, intent: Intent) {
             Log.d("fileSizeReceive", "file size broadcast")
             if (intent.action == "ACTION_SET_FILE_SIZE") {
@@ -264,6 +267,10 @@ class MainActivity: AppCompatActivity() {
 
         this.checkPermissions()
 
+        // init settings handlers
+        PhoneSensorSettingsHandler.initializePreferences(this)
+        WatchSensorSettingsHandler.initializePreferences(this)
+
         // Create communication with the watch
         val channelClient = Wearable.getChannelClient(applicationContext)
         channelClient.registerChannelCallback(object: ChannelClient.ChannelCallback() {
@@ -280,12 +287,7 @@ class MainActivity: AppCompatActivity() {
                 receiveTask.addOnCompleteListener { task ->
 
                     if (task.isSuccessful) {
-
                         Log.d("channel", "File successfully stored")
-
-
-                        // Rename the file to the original name if it has been received
-
 
                     } else {
                         Log.e("channel", "File receival/saving failed: ${task.exception}")
@@ -300,6 +302,7 @@ class MainActivity: AppCompatActivity() {
         dataButton = findViewById(R.id.download_data_button)
         loggingText = findViewById(R.id.logging_text_view)
 
+        // map of sensor to sensor UI components
         sensorTextViewList = mutableMapOf(
             SensorType.TYPE_GNSS_MEASUREMENTS to findViewById(R.id.tv_gnss_raw_check),
             SensorType.TYPE_GNSS_LOCATION to findViewById(R.id.tv_gnss_pos_check),
@@ -330,6 +333,12 @@ class MainActivity: AppCompatActivity() {
             startActivity(intent)
         }
 
+        // Set settings button
+        settingsBtn.setOnClickListener {
+            val openSettings = Intent(applicationContext, SettingsActivity::class.java)
+            startActivity(openSettings)
+        }
+
         ActivityHandler.getButtonState().observe(this) { isPressed ->
             loggingButton.isSelected = isPressed
 
@@ -344,33 +353,6 @@ class MainActivity: AppCompatActivity() {
             } else {
                 stopLogging()
             }
-        }
-
-        // Set settings button
-        settingsBtn.setOnClickListener {
-            val openSettings = Intent(applicationContext, SettingsActivity::class.java)
-            startActivity(openSettings)
-        }
-
-        ActivityHandler.sensorsSelected = mutableMapOf()
-        sharedPreferences = getSharedPreferences("DefaultSettings", Context.MODE_PRIVATE)
-        if (sharedPreferences.contains("GNSS")) {
-            var mparam = loadMutableList("GNSS")
-            ActivityHandler.sensorsSelected[SensorType.TYPE_GNSS] = Pair(
-                mparam[0] as Boolean, (mparam[1] as Double).toInt()
-            )
-            mparam = loadMutableList("IMU")
-            ActivityHandler.sensorsSelected[SensorType.TYPE_IMU] = Pair(
-                mparam[0] as Boolean, (mparam[1] as Double).toInt()
-            )
-            mparam = loadMutableList("PSR")
-            ActivityHandler.sensorsSelected[SensorType.TYPE_PRESSURE] = Pair(
-                mparam[0] as Boolean, (mparam[1] as Double).toInt()
-            )
-            mparam = loadMutableList("STEPS")
-            ActivityHandler.sensorsSelected[SensorType.TYPE_STEPS] = Pair(
-                mparam[0] as Boolean, (mparam[1] as Double).toInt()
-            )
         }
 
         // Register broadcaster
@@ -423,8 +405,17 @@ class MainActivity: AppCompatActivity() {
         updateDurationText()
         durationHandler.postDelayed(updateRunnableDuration, 1000)
 
-        // Set the data to be sent to service
-        loggingIntent.putExtra("settings", ActivityHandler.sensorsSelected as Serializable)
+        // load the sensor settings sent to logging service from file
+        val phoneSettings = PhoneSensorSettingsHandler.loadSensorValues()
+
+        // Added health sensor needed for LoggingService
+        //  ---- DO NOT REMOVE ----
+        phoneSettings[SensorType.TYPE_SPECIFIC_ECG] = Pair(false, 0)
+        phoneSettings[SensorType.TYPE_SPECIFIC_PPG] = Pair(false, 0)
+        phoneSettings[SensorType.TYPE_SPECIFIC_GSR] = Pair(false, 0)
+
+        Log.d("LoggingStarted", "Settings sent for logging: $phoneSettings")
+        loggingIntent.putExtra("settings", phoneSettings as Serializable)
 
         // Start service
         ContextCompat.startForegroundService(this, loggingIntent)
@@ -443,6 +434,8 @@ class MainActivity: AppCompatActivity() {
         loggingButton.animate().translationYBy(-250f).setDuration(200).start()
 
         Handler().postDelayed({ dataButton.visibility = View.VISIBLE }, 100)
+
+        disableSensorsInUi()
 
         // Stop logging service
         stopService(loggingIntent)
@@ -506,6 +499,18 @@ class MainActivity: AppCompatActivity() {
 
     // ---------------------------------------------------------------------------------------------
 
+    private fun disableSensorsInUi() {
+
+        sensorTextViewList.forEach { entry ->
+            val colorID = ContextCompat.getColor(
+                applicationContext, android.R.color.holo_red_light
+            )
+            entry.value.text = crossMark
+            entry.value.setTextColor(colorID)
+        }
+    }
+    // ---------------------------------------------------------------------------------------------
+
     private val updateRunnableDuration = object: Runnable {
         override fun run() {
             // Update the duration text every second
@@ -515,6 +520,9 @@ class MainActivity: AppCompatActivity() {
             durationHandler.postDelayed(this, 1000)
         }
     }
+
+    // ---------------------------------------------------------------------------------------------
+
 
     private fun updateDurationText() {
         // Calculate the elapsed time since the button was clicked
@@ -531,9 +539,12 @@ class MainActivity: AppCompatActivity() {
         timeText.text = "$durationText"
     }
 
-    // =================================================================================================
+
+    // ---------------------------------------------------------------------------------------------
 
     private fun verifyChecksum(context: Context, checkFile: File, expectedChecksum: String) {
+        // verifies the checksum for files received from the watch based on the checksum
+        // calculated on the watch to check that whole file was sent
         synchronized(fileAccessLock) {
             val rootView = (context as Activity).findViewById<View>(android.R.id.content)
             val snackbar = Snackbar.make(rootView, "Receiving file... Size: 0 KB", Snackbar.LENGTH_INDEFINITE)
@@ -584,11 +595,12 @@ class MainActivity: AppCompatActivity() {
             }
 
         }
-
-
     }
 
+    // ---------------------------------------------------------------------------------------------
+
     private fun renameFile(renameFile: File) {
+        // renames the file to be the same as the file name on the watch
         synchronized(fileAccessLock) {
             if (receivedFileName != null) {
                 val downloadsDir = applicationContext.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)
@@ -611,6 +623,8 @@ class MainActivity: AppCompatActivity() {
             }
         }
     }
+
+    // ---------------------------------------------------------------------------------------------
 
 
     private fun waitForFileTransfer(file: File, snackbar: Snackbar, context: Context, callback: (Boolean) -> Unit) {
@@ -655,6 +669,7 @@ class MainActivity: AppCompatActivity() {
                     }
                 } else {
 
+                    // progress bar for the file received vs the total file size
                     lastSize = currentSize
                     unchangedSizeCount = 0
 
@@ -672,7 +687,10 @@ class MainActivity: AppCompatActivity() {
         handler.post(checkRunnable)
     }
 
+    // ---------------------------------------------------------------------------------------------
+
     fun generateChecksum(inputStream: InputStream): String {
+        // gets checksum for the file received from the watch
         val digest = MessageDigest.getInstance("SHA-256")
         val buffer = ByteArray(8192) // Adjust buffer size as needed
         var bytesRead: Int
@@ -867,6 +885,8 @@ class GlobalNotification: Application() {
         })
     }
 
+    // ---------------------------------------------------------------------------------------------
+
     fun showFileReceivedDialog(filePath: String) {
         currentActivity?.let {
 
@@ -881,44 +901,7 @@ class GlobalNotification: Application() {
             dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
             val title = dialogView.findViewById<TextView>(R.id.dialog_title)
             val message = dialogView.findViewById<TextView>(R.id.dialog_message)
-            val okBtn = dialogView.findViewById<Button>(R.id.positiveButton)
             val cancelBtn = dialogView.findViewById<Button>(R.id.negativeButton)
-            okBtn.text = "View";
-            okBtn.setOnClickListener {
-                dialog.dismiss()
-                try {
-                    val builder = StrictMode.VmPolicy.Builder()
-                    StrictMode.setVmPolicy(builder.build())
-                    val intent = Intent(Intent.ACTION_VIEW)
-                    val uri = Uri.parse("content://" + filePath)
-                    intent.setDataAndType(uri, "*/*")
-                    intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                    startActivity(intent)
-                } catch (e: Exception) {
-                    val inflater = LayoutInflater.from(this)
-                    val dialogView = inflater.inflate(R.layout.custom_dialog, null)
-
-                    val builder = AlertDialog.Builder(this)
-                    builder.setView(dialogView as View)
-
-                    val dialog = builder.create()
-                    dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
-                    val title = dialogView.findViewById<TextView>(R.id.dialog_title)
-                    val message = dialogView.findViewById<TextView>(R.id.dialog_message)
-                    val okBtn = dialogView.findViewById<Button>(R.id.positiveButton)
-                    val cancelBtn = dialogView.findViewById<Button>(R.id.negativeButton)
-                    okBtn.setVisibility(View.GONE)
-                    cancelBtn.setOnClickListener {
-                        dialog.dismiss()
-                    }
-                    Log.d("test", e.message.toString())
-                    title.text = "File Corruption"
-                    message.text = "Error in opening of this file"
-                    dialog.show()
-                }
-
-            }
             cancelBtn.setOnClickListener {
                 dialog.dismiss()
             }
@@ -928,6 +911,8 @@ class GlobalNotification: Application() {
 
         }
     }
+
+    // ---------------------------------------------------------------------------------------------
 
     fun showAlertDialog(context: Context, title: String, message: String) {
         AlertDialog.Builder(context).apply {
@@ -941,7 +926,7 @@ class GlobalNotification: Application() {
 }
 
 class MessageListenerService: WearableListenerService() {
-
+    // listens for messages sent from the watch to the phone
     private val CHECKSUM_PATH = "/checksum"
     private val FILE_NAME_PATH = "/file-name"
     private val FILE_SIZE_PATH = "/file-size"

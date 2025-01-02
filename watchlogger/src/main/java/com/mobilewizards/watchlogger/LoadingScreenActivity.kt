@@ -15,7 +15,7 @@ class LoadingScreenActivity: Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         // initialize Scheduler Manager
-        SchedulerManager.schedulePeriodicLogging(this)
+        //SchedulerManager.schedulePeriodicLogging(this)
         binding = ActivityLoadingScreenBinding.inflate(layoutInflater)
         setContentView(binding.root)
 

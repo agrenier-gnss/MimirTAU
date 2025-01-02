@@ -16,11 +16,14 @@ import com.mimir.sensors.SensorType
 import com.mobilewizards.logging_app.databinding.ActivitySettingsBinding
 import android.widget.Toast
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
+import androidx.work.WorkManager
+import com.mobilewizards.watchlogger.SchedulerManager
 import org.json.JSONObject
 import com.mobilewizards.watchlogger.SensorSettingsHandler
 
 // ---------------------------------------------------------------------------------------------
 
+// ui element indexes and global symbols
 const val IDX_SWITCH = 0
 const val IDX_SEEKBAR = 1
 const val IDX_TEXTVIEW = 2
@@ -38,7 +41,9 @@ class SettingsActivity: Activity() {
 
     // ---------------------------------------------------------------------------------------------
 
+
     private val updateReceiver = object: BroadcastReceiver() {
+        // receiver for settings sent from phone
         override fun onReceive(context: Context, intent: Intent) {
             if (intent.action == "ACTION_SETTINGS_UPDATED") {
                 // refresh UI whenever settings are received from the phone
@@ -64,14 +69,36 @@ class SettingsActivity: Activity() {
 
         // Saving settings
         val btnSave = findViewById<Button>(R.id.button_save)
+        // find switch_periodic_recording
+        val togglePeriodicRecording = findViewById<Switch>(R.id.switch_periodic_recording)
+        // recover toggle
+        val sharedPreferences = getSharedPreferences("AppPreferences", MODE_PRIVATE)
+        togglePeriodicRecording.isChecked = sharedPreferences.getBoolean("isPeriodicRecordingEnabled", false)
+
         btnSave.setOnClickListener {
             saveSettings()
+            // turn on/off based on the status of toggle
+            if (togglePeriodicRecording.isChecked) {
+                SchedulerManager.schedulePeriodicLogging(this)
+                Toast.makeText(this, "Background periodic recording enabled.", Toast.LENGTH_SHORT).show()
+            } else {
+                WorkManager.getInstance(this).cancelUniqueWork("SensorLoggingWork")
+                Toast.makeText(this, "Background periodic recording disabled.", Toast.LENGTH_SHORT).show()
+            }
+
+            // save toggle status to SharedPreferences
+            val editor = sharedPreferences.edit()
+            editor.putBoolean("isPeriodicRecordingEnabled", togglePeriodicRecording.isChecked)
+            editor.apply()
+
             setResult(RESULT_OK)
             finish() // Close activity
         }
-        
+
+        // initialize the settings handler
         SensorSettingsHandler.initializePreferences(this)
 
+        // initialize the UI component map for sensors
         initializeSensorComponents()
 
         loadSharedPreferencesToUi()
@@ -96,6 +123,8 @@ class SettingsActivity: Activity() {
 
     private fun initializeSensorComponents() {
 
+        // initialize the UI component map for sensors
+        // every sensor has enabled switch, seekbar to set HZ and text field
         sensorsComponents = mutableMapOf()
         // Setting the IDs for each components
         val sensorsIDs = mapOf(
@@ -120,6 +149,8 @@ class SettingsActivity: Activity() {
     // ---------------------------------------------------------------------------------------------
 
     private fun loadSharedPreferencesToUi() {
+
+        // Loads shared preferences for sensor settings from the file and updates the UI accordingly
 
         Log.d("SettingsActivity", "UI updated from shared preferences.")
 
@@ -187,6 +218,7 @@ class SettingsActivity: Activity() {
     private fun setupListeners() {
         // Setting listeners
         sensorsComponents.forEach { entry ->
+            // makes sure that GSR and ECG sensors arent enabled at the same time
             when (entry.key) {
                 SensorType.TYPE_SPECIFIC_ECG -> {
                     (entry.value[IDX_SWITCH] as? Switch)?.setOnCheckedChangeListener { buttonView, isChecked ->
@@ -225,6 +257,7 @@ class SettingsActivity: Activity() {
     // ---------------------------------------------------------------------------------------------
 
     private fun updateTextView(textView: TextView, progressIndex: Int) {
+        // Updates the Hz value based on the progress bar index
         val progressHz = SensorSettingsHandler.progressToFrequency[progressIndex]
         textView.text = if (progressHz == 0) infinitySymbol else "$progressHz Hz"
     }
@@ -232,9 +265,9 @@ class SettingsActivity: Activity() {
     // ---------------------------------------------------------------------------------------------
 
     private fun saveSettings() {
+        // loads the settings from the UI elements and saves them to file through the SensorSettingsHandler
         sensorsComponents.forEach { entry ->
 
-            val spkey = SensorSettingsHandler.SensorToString[entry.key]!!
             val isChecked = (entry.value[IDX_SWITCH] as? Switch)?.isChecked as Boolean
 
             val progress = if (entry.key == SensorType.TYPE_GNSS) {
@@ -243,7 +276,7 @@ class SettingsActivity: Activity() {
                 (entry.value[IDX_SEEKBAR] as? SeekBar)?.progress as Int
             }
 
-            SensorSettingsHandler.saveSetting(spkey, Pair(isChecked, progress))
+            SensorSettingsHandler.saveSetting(entry.key, Pair(isChecked, progress))
 
             Log.d(
                 "SettingsActivity", "Settings for ${entry.key} changed to ($isChecked, $progress)."
@@ -256,24 +289,27 @@ class SettingsActivity: Activity() {
     // ---------------------------------------------------------------------------------------------
 
     companion object {
+        // receives the settings JSON sent from the phone, parses it and saves it to file
         fun processSettingsJson(context: Context, jsonData: JSONObject) {
 
             // Save Json data to shared preferences file
-            jsonData.keys().forEach { key ->
-                val isSwitchOn = jsonData.getJSONObject(key).getBoolean("switch")
+            jsonData.keys().forEach { keyString ->
+                val isSwitchOn = jsonData.getJSONObject(keyString).getBoolean("switch")
 
                 var frequencyIndex = 0
-                if (jsonData.getJSONObject(key).has("value")) {
-                    val frequencyValue = jsonData.getJSONObject(key).getInt("value")
-                    frequencyIndex = SensorSettingsHandler.frequencyToProgress[frequencyValue] ?: 1
+                if (jsonData.getJSONObject(keyString).has("value")) {
+                    val frequencyValue = jsonData.getJSONObject(keyString).getInt("value")
+                    frequencyIndex = SensorSettingsHandler.frequencyToProgress[frequencyValue] ?: 0
                 }
 
                 val sensorValue: Pair<Boolean, Int> = Pair(isSwitchOn, frequencyIndex)
-                SensorSettingsHandler.saveSetting(key, sensorValue)
+                val keySensor = SensorSettingsHandler.StringToSensor[keyString]!!
+                SensorSettingsHandler.saveSetting(keySensor, sensorValue)
             }
 
             Log.d("SettingsActivity", "Settings successfully processed and saved")
 
+            // broadcasts intent to update the UI to be updated with the settings file
             val broadcastIntent = Intent("ACTION_SETTINGS_UPDATED")
 
             // broadcast update to make sure UI is up to date

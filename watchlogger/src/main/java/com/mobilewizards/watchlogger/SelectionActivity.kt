@@ -15,6 +15,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.IntentFilter
 import android.widget.Toast
+import com.mobilewizards.watchlogger.SensorSettingsHandler
 import org.json.JSONObject
 
 
@@ -47,10 +48,13 @@ class SelectionActivity: Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        SensorSettingsHandler.initializePreferences(this)
         binding = ActivitySelectionBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
         // Register the receiver to listen for settings JSON
+        Log.d("SelectionActivity", "receiver created")
         registerReceiver(
             settingsJsonReceiver, IntentFilter("ACTION_RECEIVE_SETTINGS_JSON"), RECEIVER_EXPORTED
         )
@@ -75,8 +79,6 @@ class SelectionActivity: Activity() {
             val openSendSurveys = Intent(this, SendSurveysActivity::class.java)
             startActivity(openSendSurveys)
         }
-
-
     }
 
     // =============================================================================================
@@ -136,6 +138,7 @@ class SelectionActivity: Activity() {
 // =============================================================================================
 
 class WatchMessageListenerService: WearableListenerService() {
+    // listener for the JASON settings file sent from phone to the watch
 
     private val SETTINGS_PATH = "/watch_settings" // Path to identify settings JSON
 

@@ -6,10 +6,12 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Handler
 import android.os.IBinder
+import android.util.Log
 import androidx.core.app.NotificationCompat
 
 class LoggingService: Service() {
 
+    private val TAG = "LoggingService"
     private val channelId = "SensorLoggingChannelId"
     private val notificationId = 1
     private lateinit var sensorsHandler: SensorsHandler
@@ -36,10 +38,12 @@ class LoggingService: Service() {
         // This method will be called when the service is started
 
         // Build the notification
+
         val notification = buildNotification()
 
         // Recover the settings from intent
         settingsMap = intent?.getSerializableExtra("settings") as Map<SensorType, Pair<Boolean, Int>>
+        Log.d(TAG, "Logging started, settings received: $settingsMap")
 
         // Start the service in the foreground
         startForeground(notificationId, notification)
