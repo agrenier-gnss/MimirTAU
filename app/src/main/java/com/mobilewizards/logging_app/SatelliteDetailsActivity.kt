@@ -70,7 +70,7 @@ class SatelliteDetailsActivity : AppCompatActivity() {
 
         val details = listOf(
             satellite.svid.toString(),
-            "${satellite.signal}",
+            String.format("%.1f", satellite.signal),
             "${satellite.elevation}°",
             "${satellite.azimuth}°",
             if (satellite.tracking) "Yes" else "No"
@@ -93,6 +93,7 @@ class SatelliteDetailsActivity : AppCompatActivity() {
         // Fetch the latest satellite data from MainActivity
         val updatedSatellites = MainActivity.currentSatellites
             .filter { it.constellationType == constellationType }
+            .sortedBy { it.svid }
 
         // Get the current rows' tags
         val existingRows = mutableMapOf<Int, TableRow>()
@@ -101,14 +102,16 @@ class SatelliteDetailsActivity : AppCompatActivity() {
             val svid = row.tag as Int
             existingRows[svid] = row
         }
+        satelliteDetailsTable.removeViews(1, satelliteDetailsTable.childCount - 1)
 
         // Update or add rows
         updatedSatellites.forEach { updatedSatellite ->
+            addSatelliteRow(updatedSatellite)
             val satelliteRow = existingRows[updatedSatellite.svid]
             if (satelliteRow != null) {
                 // Update existing row
                 val updatedDetails = listOf(
-                    "${updatedSatellite.signal}",
+                    String.format("%.1f", updatedSatellite.signal),
                     "${updatedSatellite.elevation}°",
                     "${updatedSatellite.azimuth}°",
                     if (updatedSatellite.tracking) "Yes" else "No"
