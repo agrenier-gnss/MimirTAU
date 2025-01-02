@@ -11,18 +11,20 @@ import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
-import android.net.Uri
+import android.location.GnssStatus
+import android.location.LocationManager
 import android.os.Bundle
 import android.os.Environment
 import android.os.Handler
 import android.os.Looper
-import android.os.StrictMode
 import android.os.SystemClock
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
+import android.widget.LinearLayout
+import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
@@ -31,6 +33,7 @@ import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
+import androidx.recyclerview.widget.RecyclerView
 import com.google.android.gms.wearable.ChannelClient
 import com.google.android.gms.wearable.MessageEvent
 import com.google.android.gms.wearable.Wearable
@@ -45,6 +48,8 @@ import java.io.Serializable
 import java.security.MessageDigest
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
+import android.os.Parcel
+import android.os.Parcelable
 
 private const val checkMark = "\u2714"
 private const val crossMark = "\u2716"
@@ -71,6 +76,59 @@ class MainActivity: AppCompatActivity() {
     private var sensorTextViewList = mutableMapOf<SensorType, TextView>()
 
     private val fileAccessLock = Object()
+
+    private lateinit var locationManager: LocationManager
+    private val LOCATION_PERMISSION_REQUEST_CODE = 1
+
+    private lateinit var satelliteRecyclerView: RecyclerView
+    private lateinit var satelliteAdapter: SatelliteAdapter
+    private val satelliteList = mutableListOf<String>()
+
+    data class Satellite(
+        val svid: Int,
+        val constellationType: String,
+        val azimuth: Float,
+        val elevation: Float,
+        val tracking: Boolean,
+        val signal: Float
+    ) : Parcelable {
+        constructor(parcel: Parcel) : this(
+            parcel.readInt(),
+            parcel.readString() ?: "",
+            parcel.readFloat(),
+            parcel.readFloat(),
+            parcel.readByte() != 0.toByte(),
+            parcel.readFloat()
+        )
+
+        override fun writeToParcel(parcel: Parcel, flags: Int) {
+            parcel.writeInt(svid)
+            parcel.writeString(constellationType)
+            parcel.writeFloat(azimuth)
+            parcel.writeFloat(elevation)
+            parcel.writeByte(if (tracking) 1 else 0)
+            parcel.writeFloat(signal)
+        }
+
+        override fun describeContents(): Int {
+            return 0
+        }
+
+        companion object CREATOR : Parcelable.Creator<Satellite> {
+            override fun createFromParcel(parcel: Parcel): Satellite {
+                return Satellite(parcel)
+            }
+
+            override fun newArray(size: Int): Array<Satellite?> {
+                return arrayOfNulls(size)
+            }
+        }
+    }
+    companion object {
+        var currentSatellites: List<Satellite> = emptyList()
+    }
+
+
 
     // ---------------------------------------------------------------------------------------------
 
@@ -296,18 +354,29 @@ class MainActivity: AppCompatActivity() {
         }
 
         // Register broadcaster
-        registerReceiver(sensorCheckReceiver, IntentFilter("SENSOR_CHECK_UPDATE"), RECEIVER_EXPORTED)
-    }
+        registerReceiver(sensorCheckReceiver, IntentFilter("SENSOR_CHECK_UPDATE"), RECEIVER_NOT_EXPORTED)
+        // Register broadcoaster
+        registerReceiver(
+            sensorCheckReceiver,
+            IntentFilter("SENSOR_CHECK_UPDATE"),
+            RECEIVER_NOT_EXPORTED
+        )
 
-    // ---------------------------------------------------------------------------------------------
+        // Initialize LocationManager for GNSS Satellite info
+        locationManager = getSystemService(LOCATION_SERVICE) as LocationManager
 
-    override fun onDestroy() {
-        // Remove the updateRunnable when the activity is destroyed to prevent memory leaks
-        unregisterReceiver(sensorCheckReceiver)
-        durationHandler.removeCallbacks(updateRunnableDuration)
-        unregisterReceiver(checksumReceiver)
-        unregisterReceiver(fileNameReceiver)
-        super.onDestroy()
+        // Check for location permission before starting
+        if (ContextCompat.checkSelfPermission(
+                this,
+                android.Manifest.permission.ACCESS_FINE_LOCATION
+            ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        ) {
+            startTrackingSatellites()
+        } else {
+            // Request permissions if not granted
+            requestPermissions(arrayOf(android.Manifest.permission.ACCESS_FINE_LOCATION), 1001)
+        }
+
     }
 
     // ---------------------------------------------------------------------------------------------
@@ -401,7 +470,7 @@ class MainActivity: AppCompatActivity() {
         when (requestCode) {
 
             //location permission
-            225 -> {
+            1 or 225 -> {
                 if ((grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED)) {
                     // Permission is granted. Continue the action or workflow
                     // in your app.
@@ -630,6 +699,184 @@ class MainActivity: AppCompatActivity() {
         val hashBytes = digest.digest()
         return hashBytes.fold("") { str, it -> str + "%02x".format(it) }
     }
+
+    // =================================================================================================
+
+    private fun startTrackingSatellites() {
+        // Check if the required permission is granted
+        if (ActivityCompat.checkSelfPermission(
+                this,
+                Manifest.permission.ACCESS_FINE_LOCATION
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            // Request the missing permission
+            ActivityCompat.requestPermissions(
+                this,
+                arrayOf(Manifest.permission.ACCESS_FINE_LOCATION),
+                LOCATION_PERMISSION_REQUEST_CODE
+            )
+            return
+        }
+
+        // Permission is granted; proceed with GNSS status tracking
+        locationManager.registerGnssStatusCallback(gnssStatusCallback, null)
+    }
+
+
+    private val gnssStatusCallback = object : GnssStatus.Callback() {
+        override fun onSatelliteStatusChanged(status: GnssStatus) {
+            super.onSatelliteStatusChanged(status)
+
+            val satellites = mutableListOf<Satellite>()
+            for (i in 0 until status.satelliteCount) {
+                val svid = status.getSvid(i)
+                val constellationType = getConstellationTypeName(status.getConstellationType(i))
+                val azimuth = status.getAzimuthDegrees(i)
+                val elevation = status.getElevationDegrees(i)
+                val tracking = status.usedInFix(i)
+                val signalStrength = status.getCn0DbHz(i)
+
+                val satellite = Satellite(
+                    svid,
+                    constellationType,
+                    azimuth,
+                    elevation,
+                    tracking,
+                    signalStrength
+                )
+
+                satellites.add(satellite)
+            }
+
+            showSatellites(satellites)
+            currentSatellites = satellites
+        }
+    }
+
+    private fun showSatellites(satellites: List<Satellite>) {
+        // Clear previous list
+        satelliteList.clear()
+
+        val constellationCounts = mutableMapOf(
+            "GPS" to 0,
+            "GLONASS" to 0,
+            "BeiDou" to 0,
+            "Galileo" to 0,
+            "SBAS" to 0,
+            "IRNSS" to 0,
+            "QZSS" to 0,
+            "Unknown" to 0
+        )
+
+        // Update the constellation counts
+        satellites.forEach { satellite ->
+            constellationCounts[satellite.constellationType] =
+                constellationCounts[satellite.constellationType]!! + 1
+        }
+
+        satelliteList.add("Satellites connected (${satellites.size})")
+        constellationCounts.forEach { (type, count) ->
+            if (count > 0) satelliteList.add("$type ($count)")
+        }
+
+        // Find the container LinearLayout
+        val container = findViewById<LinearLayout>(R.id.satelliteListContainer)
+        container.removeAllViews()
+
+        satelliteList.forEach { satelliteSummary ->
+            val rowLayout = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                setPadding(16, 8, 16, 8)
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                )
+            }
+
+            // TextView for Constellation Summary
+            val textView = TextView(this).apply {
+                text = satelliteSummary
+                textSize = 15f
+                setPadding(8, 8, 8, 8)
+                setTextColor(Color.WHITE)
+                layoutParams = LinearLayout.LayoutParams(
+                    0,
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    1f
+                )
+            }
+
+            //If you move this to the bottom of this function, the button will appear on the left
+            // and not on the right.
+            rowLayout.addView(textView)
+
+            // Button for Viewing Details
+            if (!satelliteSummary.startsWith("Satellites connected")) {
+                val button = Button(this).apply {
+                    text = "Show"
+                    textSize = 10f
+                    setPadding(8, 4, 8, 4)
+                    setBackgroundResource(R.drawable.button_background)
+                    setTextColor(Color.BLACK)
+                    layoutParams = LinearLayout.LayoutParams(
+                        180,
+                        70
+                    ).apply {
+                        marginStart = 8
+                    }
+                    setOnClickListener {
+                        val constellationType = satelliteSummary.substringBefore(" ")
+                        showSatelliteDetails(constellationType, satellites)
+                    }
+                }
+                rowLayout.addView(button)
+            }
+            container.addView(rowLayout)
+        }
+
+        findViewById<ScrollView>(R.id.satelliteListScroll).visibility = View.VISIBLE
+    }
+
+    private fun showSatelliteDetails(constellationType: String, satellites: List<Satellite>) {
+        // Filter satellites by constellation type
+        val filteredSatellites = satellites.filter { it.constellationType == constellationType }
+
+        if (filteredSatellites.isNotEmpty()) {
+            val intent = Intent(this, SatelliteDetailsActivity::class.java)
+            intent.putExtra("CONSTELLATION_TYPE", constellationType) // Pass the constellation type
+            intent.putParcelableArrayListExtra("SATELLITE_LIST", ArrayList(filteredSatellites)) // Pass the filtered satellites
+            startActivity(intent)
+        } else {
+            Toast.makeText(this, "No satellites found for $constellationType", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+
+
+    private fun getConstellationTypeName(type: Int): String {
+        return when (type) {
+            GnssStatus.CONSTELLATION_GPS -> "GPS"
+            GnssStatus.CONSTELLATION_GLONASS -> "GLONASS"
+            GnssStatus.CONSTELLATION_BEIDOU -> "BeiDou"
+            GnssStatus.CONSTELLATION_GALILEO -> "Galileo"
+            GnssStatus.CONSTELLATION_SBAS -> "SBAS"
+            GnssStatus.CONSTELLATION_IRNSS -> "IRNSS"
+            GnssStatus.CONSTELLATION_QZSS -> "QZSS"
+            GnssStatus.CONSTELLATION_UNKNOWN -> "Unknown"
+            else -> "Unknown"
+        }
+    }
+
+    override fun onDestroy() {
+        // Remove the updateRunnable when the activity is destroyed to prevent memory leaks
+        unregisterReceiver(sensorCheckReceiver)
+        durationHandler.removeCallbacks(updateRunnableDuration)
+        unregisterReceiver(checksumReceiver)
+        unregisterReceiver(fileNameReceiver)
+        unregisterReceiver(fileSizeReceiver)
+        locationManager.unregisterGnssStatusCallback(gnssStatusCallback)
+        super.onDestroy()
+    }
 }
 // =================================================================================================
 
@@ -749,5 +996,40 @@ class MessageListenerService: WearableListenerService() {
                 super.onMessageReceived(messageEvent)
             }
         }
+    }
+}
+
+class SatelliteAdapter(
+    private val satellites: List<String>,
+    private val onSatelliteClick: (String) -> Unit // Callback to handle click events
+) : RecyclerView.Adapter<SatelliteAdapter.SatelliteViewHolder>() {
+
+    // ViewHolder to hold the view references
+    class SatelliteViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+        val satelliteInfo: TextView = itemView.findViewById(R.id.satelliteInfo)
+    }
+
+    // Called when a new view holder is created
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): SatelliteViewHolder {
+        val view = LayoutInflater.from(parent.context)
+            .inflate(R.layout.item_satellite, parent, false) // Inflate the individual item view
+        return SatelliteViewHolder(view)
+    }
+
+    // Bind data to the view holder
+    override fun onBindViewHolder(holder: SatelliteViewHolder, position: Int) {
+        val satellite = satellites[position]
+        holder.satelliteInfo.text = satellite // Set the satellite name or info
+
+        // Set the click listener on the item view
+        holder.itemView.setOnClickListener {
+            // Trigger the callback when an item is clicked
+            onSatelliteClick(satellite) // Pass the clicked satellite to the callback
+        }
+    }
+
+    // Return the total number of items in the list
+    override fun getItemCount(): Int {
+        return satellites.size
     }
 }

@@ -42,7 +42,8 @@
         </activity>
         <activity android:name=".SettingsActivity"></activity>
         <activity android:name=".LogEventActivity"></activity>
-        <activity android:name=".SurveyHistoryActivity" />
+        <activity android:name=".SurveyHistoryActivity"></activity>
+        <activity android:name=".SatelliteDetailsActivity"/>
 
         <service
             android:name="com.mimir.sensors.LoggingService"
