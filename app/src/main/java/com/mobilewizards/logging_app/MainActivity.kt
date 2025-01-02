@@ -768,6 +768,7 @@ class MainActivity: AppCompatActivity() {
             "Unknown" to 0
         )
 
+        // Update the constellation counts
         satellites.forEach { satellite ->
             constellationCounts[satellite.constellationType] =
                 constellationCounts[satellite.constellationType]!! + 1
@@ -782,23 +783,57 @@ class MainActivity: AppCompatActivity() {
         val container = findViewById<LinearLayout>(R.id.satelliteListContainer)
         container.removeAllViews()
 
-        // Dynamically add TextView for each constellation/summary item
         satelliteList.forEach { satelliteSummary ->
-            val textView = TextView(this)
-            textView.text = satelliteSummary
-            textView.setTextColor(Color.WHITE)
-            textView.textSize = 16f
-            textView.setPadding(16, 16, 16, 16)
-            textView.setOnClickListener {
-                val constellationType = satelliteSummary.substringBefore(" ") // Extract constellation type
-                showSatelliteDetails(constellationType, satellites) // Show detailed info
-                Log.d("SatelliteDetails", "Constellation type: $constellationType")
-
+            val rowLayout = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                setPadding(16, 8, 16, 8)
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                )
             }
-            container.addView(textView)
+
+            // TextView for Constellation Summary
+            val textView = TextView(this).apply {
+                text = satelliteSummary
+                textSize = 15f
+                setPadding(8, 8, 8, 8)
+                setTextColor(Color.WHITE)
+                layoutParams = LinearLayout.LayoutParams(
+                    0,
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    1f
+                )
+            }
+
+            //If you move this to the bottom of this function, the button will appear on the left
+            // and not on the right.
+            rowLayout.addView(textView)
+
+            // Button for Viewing Details
+            if (!satelliteSummary.startsWith("Satellites connected")) {
+                val button = Button(this).apply {
+                    text = "Show"
+                    textSize = 10f
+                    setPadding(8, 4, 8, 4)
+                    setBackgroundResource(R.drawable.button_background)
+                    setTextColor(Color.BLACK)
+                    layoutParams = LinearLayout.LayoutParams(
+                        180,
+                        70
+                    ).apply {
+                        marginStart = 8
+                    }
+                    setOnClickListener {
+                        val constellationType = satelliteSummary.substringBefore(" ")
+                        showSatelliteDetails(constellationType, satellites)
+                    }
+                }
+                rowLayout.addView(button)
+            }
+            container.addView(rowLayout)
         }
 
-        // Make the ScrollView visible
         findViewById<ScrollView>(R.id.satelliteListScroll).visibility = View.VISIBLE
     }
 
