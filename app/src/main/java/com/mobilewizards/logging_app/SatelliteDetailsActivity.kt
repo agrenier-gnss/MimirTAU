@@ -1,5 +1,6 @@
 package com.mobilewizards.logging_app
 
+import android.annotation.SuppressLint
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -65,6 +66,7 @@ class SatelliteDetailsActivity : AppCompatActivity() {
         satelliteDetailsTable.addView(headerRow)
     }
 
+    @SuppressLint("DefaultLocale")
     private fun addSatelliteRow(satellite: MainActivity.Satellite) {
         val satelliteRow = TableRow(this).apply { tag = satellite.svid }
 
@@ -89,6 +91,7 @@ class SatelliteDetailsActivity : AppCompatActivity() {
         satelliteDetailsTable.addView(satelliteRow)
     }
 
+    @SuppressLint("DefaultLocale")
     private fun updateSatelliteData() {
         // Fetch the latest satellite data from MainActivity
         val updatedSatellites = MainActivity.currentSatellites
