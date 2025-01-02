@@ -11,14 +11,12 @@ import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
-import android.net.Uri
 import android.location.GnssStatus
 import android.location.LocationManager
 import android.os.Bundle
 import android.os.Environment
 import android.os.Handler
 import android.os.Looper
-import android.os.StrictMode
 import android.os.SystemClock
 import android.util.Log
 import android.view.LayoutInflater
@@ -379,13 +377,6 @@ class MainActivity: AppCompatActivity() {
             requestPermissions(arrayOf(android.Manifest.permission.ACCESS_FINE_LOCATION), 1001)
         }
 
-    }
-
-    private fun loadMutableList(key: String): MutableList<String> {
-        val jsonString = sharedPreferences.getString(key, "")
-        val type: Type = object: TypeToken<MutableList<Any>>() {}.type
-
-        return Gson().fromJson(jsonString, type) ?: mutableListOf()
     }
 
     // ---------------------------------------------------------------------------------------------
