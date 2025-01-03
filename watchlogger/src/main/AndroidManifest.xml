@@ -41,7 +41,6 @@
         <meta-data
             android:name="com.google.android.gms.version"
             android:value="@integer/google_play_services_version" />
-
         <activity
             android:name=".FileSendActivity"
             android:exported="true"
@@ -49,6 +48,7 @@
             android:taskAffinity=""/>
         <activity
             android:name=".SendSurveysActivity"
+            android:theme="@style/Theme.AppCompatMinimal"
             android:exported="true"
             android:label="@string/title_activity_send_surveys"
             android:taskAffinity="" />
