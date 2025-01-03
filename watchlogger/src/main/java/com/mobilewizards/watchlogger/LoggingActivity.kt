@@ -137,7 +137,7 @@ class LoggingActivity: Activity() {
         }
 
         // Register broadcaster
-        registerReceiver(sensorCheckReceiver, IntentFilter("SENSOR_CHECK_UPDATE"), RECEIVER_NOT_EXPORTED)
+        registerReceiver(sensorCheckReceiver, IntentFilter("SENSOR_CHECK_UPDATE"), RECEIVER_EXPORTED)
 
 //        // Initialize the variable sensorManager
 //        val sensorManager = getSystemService(SENSOR_SERVICE) as SensorManager
