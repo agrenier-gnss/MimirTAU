@@ -89,15 +89,6 @@
 -keep class android.provider.MediaStore { *; }
 -keep class android.provider.MediaStore$Downloads { *; }
 
-# Prevent stripping Android Log calls (Optional for debugging release build)
--assumenosideeffects class android.util.Log {
-    public static *** d(...);
-    public static *** v(...);
-    public static *** i(...);
-    public static *** w(...);
-    public static *** e(...);
-}
-
 # Preserve RecyclerView and LayoutManager
 -keep class androidx.recyclerview.widget.RecyclerView { *; }
 -keep class androidx.recyclerview.widget.LinearLayoutManager { *; }
