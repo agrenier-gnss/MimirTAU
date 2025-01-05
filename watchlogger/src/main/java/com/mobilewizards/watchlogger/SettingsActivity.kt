@@ -80,10 +80,10 @@ class SettingsActivity: Activity() {
             // turn on/off based on the status of toggle
             if (togglePeriodicRecording.isChecked) {
                 SchedulerManager.schedulePeriodicLogging(this)
-                Toast.makeText(this, "Background periodic recording enabled.", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "Background recording enabled.", Toast.LENGTH_SHORT).show()
             } else {
                 WorkManager.getInstance(this).cancelUniqueWork("SensorLoggingWork")
-                Toast.makeText(this, "Background periodic recording disabled.", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "Background recording disabled.", Toast.LENGTH_SHORT).show()
             }
 
             // save toggle status to SharedPreferences
