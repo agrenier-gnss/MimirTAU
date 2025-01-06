@@ -10,7 +10,7 @@ object SchedulerManager {
     // entrance of schedule Periodic Logging
     fun schedulePeriodicLogging(context: Context) {
         val workRequest = PeriodicWorkRequestBuilder<LoggingWorker>(
-            1, TimeUnit.MINUTES // set periodic intervals,minimum 15 minutes
+            15, TimeUnit.MINUTES // set periodic intervals,minimum 15 minutes
         ).setInitialDelay(0, TimeUnit.SECONDS).build()
 
         /*
