@@ -6,14 +6,13 @@ import android.util.Log
 import androidx.core.content.ContextCompat
 import androidx.work.Worker
 import androidx.work.WorkerParameters
-import com.mimir.sensors.LoggingService
+import com.mimir.sensors.BackgroundLoggingService
 import com.mimir.sensors.SensorType
 import java.io.Serializable
 
 class LoggingWorker(
-    context: Context,
-    workerParams: WorkerParameters
-) : Worker(context, workerParams) {
+    context: Context, workerParams: WorkerParameters
+): Worker(context, workerParams) {
     //private val loggingIntent = Intent(context.applicationContext, LoggingService::class.java)
     // define static Sensor Settings
     private val staticSensorSettings: Map<SensorType, Pair<Boolean, Int>> = mapOf(
@@ -30,7 +29,12 @@ class LoggingWorker(
         Log.d("LoggingWorker", "Starting LoggingWorker...")
 
         // Step 1: Start LoggingService
-        startLoggingService()
+        try {
+            startLoggingService()
+        } catch (e: Exception) {
+            Log.e("LoggingWorker", "Error starting service: ${e.message}")
+            return Result.failure()
+        }
 
         // Step 2: Delay for 60 seconds (handled in background by WorkManager)
         Thread.sleep(60000)
@@ -44,7 +48,7 @@ class LoggingWorker(
 
     private fun startLoggingService() {
         Log.d("LoggingWorker", "Starting LoggingService...")
-        val loggingIntent = Intent(applicationContext, LoggingService::class.java)
+        val loggingIntent = Intent(applicationContext, BackgroundLoggingService::class.java)
 
         loggingIntent.putExtra("settings", staticSensorSettings as Serializable)
 
@@ -56,7 +60,7 @@ class LoggingWorker(
         Log.d("LoggingWorker", "Stopping LoggingService...")
 
         // Prepare the intent to stop LoggingService
-        val loggingIntent = Intent(applicationContext, LoggingService::class.java)
+        val loggingIntent = Intent(applicationContext, BackgroundLoggingService::class.java)
         applicationContext.stopService(loggingIntent)
     }
 }
