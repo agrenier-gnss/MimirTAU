@@ -4,27 +4,20 @@ import android.app.*
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.os.Handler
 import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
 
-class LoggingService: Service() {
+class BackgroundLoggingService: Service() {
 
-    private val TAG = "LoggingService"
+    // roughly a copy of the logging service with some modifications like the removal of message sending
+    // this is to prevent interference with normal logging
+
+    private val TAG = "BackgroundLoggingService"
     private val channelId = "SensorLoggingChannelId"
     private val notificationId = 1
     private lateinit var sensorsHandler: SensorsHandler
     private lateinit var settingsMap: Map<SensorType, Pair<Boolean, Int>>
-
-    private val sensorCheckHandler = Handler()
-    private val checkSensorsRunnable = object: Runnable {
-        override fun run() {
-            // Perform the check of the sensor list every second
-            checkSensorList()
-            sensorCheckHandler.postDelayed(this, 1000)
-        }
-    }
 
     override fun onCreate() {
         super.onCreate()
@@ -160,7 +153,6 @@ class LoggingService: Service() {
         sensorsHandler.startLogging()
 
         // For checking sensor status and showing on display
-        sensorCheckHandler.postDelayed(checkSensorsRunnable, 1000)
     }
 
     // ---------------------------------------------------------------------------------------------
@@ -176,22 +168,10 @@ class LoggingService: Service() {
         return (1.0 / (settingsMap[sensor]?.second as Int) * 1e6).toInt()
     }
 
-
     // ---------------------------------------------------------------------------------------------
 
     fun stopLogging(context: Context) {
         sensorsHandler.stopLogging()
-        sensorCheckHandler.removeCallbacks(checkSensorsRunnable)
         stopForeground(STOP_FOREGROUND_DETACH)
-    }
-
-    // ---------------------------------------------------------------------------------------------
-
-    private fun checkSensorList() {
-        val intent = Intent("SENSOR_CHECK_UPDATE")
-        sensorsHandler.mSensors.forEach {
-            intent.putExtra("${it.type}", it.isReceived)
-        }
-        sendBroadcast(intent)
     }
 }
