@@ -123,10 +123,20 @@ class SendSurveysActivity: AppCompatActivity() {
             setImageResource(R.drawable.upload)
         }
 
-
         confirmSendButton.setOnClickListener {
+            val sendingToast = Toast.makeText(
+                this@SendSurveysActivity,
+                "Transfer starting\n" +
+                        "Please wait...",
+                Toast.LENGTH_LONG
+            )
+            val textView = sendingToast.view?.findViewById<TextView>(android.R.id.message)
+            textView?.textSize = 5f
+            sendingToast?.show()
+
             lifecycleScope.launch {
                 sendFiles(file, nodeId)
+                sendingToast?.cancel()
             }
             dialog.dismiss()
         }
