@@ -274,12 +274,21 @@
                 android:layout_height="4dp"
                 android:background="?android:attr/listDivider" />
 
+            <TextView
+                android:id="@+id/periodic_recording_text"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="5dp"
+                android:layout_marginBottom="5dp"
+                android:gravity="center"
+                android:text="@string/str_periodic_recording"
+                android:textColor="@color/fontWhite"
+                android:textSize="14sp" />
 
             <Switch
                 android:id="@+id/switch_periodic_recording"
                 android:layout_width="130dp"
                 android:layout_height="wrap_content"
-                android:text="@string/str_periodic_recording"
                 android:textColor="@color/fontWhite"
                 tools:ignore="UseSwitchCompatOrMaterialXml" />
 

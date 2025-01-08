@@ -14,11 +14,11 @@
     <uses-permission android:name="android.permission.BODY_SENSORS" />
     <uses-permission android:name="android.permission.HIGH_SAMPLING_RATE_SENSORS" />
     <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION"/>
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
-    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />
 
     <application
         android:allowBackup="true"
@@ -26,7 +26,7 @@
         android:label="@string/app_name"
         android:supportsRtl="true"
         android:theme="@android:style/Theme.DeviceDefault">
-<!--        android:theme="@style/Theme.Logging_app">-->
+        <!--        android:theme="@style/Theme.Logging_app">-->
         <uses-library
             android:name="com.google.android.wearable"
             android:required="true" />
@@ -45,7 +45,7 @@
             android:name=".FileSendActivity"
             android:exported="true"
             android:label="@string/title_activity_file_send"
-            android:taskAffinity=""/>
+            android:taskAffinity="" />
         <activity
             android:name=".SendSurveysActivity"
             android:theme="@style/Theme.AppCompatMinimal"
@@ -77,18 +77,24 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
         <service
             android:name="com.mimir.sensors.LoggingService"
             android:exported="false"
             android:label="LoggingService"
-            android:foregroundServiceType="location">
-        </service>
-	<service
+            android:foregroundServiceType="location" />
+        <service
+            android:name="com.mimir.sensors.BackgroundLoggingService"
+            android:exported="true"
+            android:foregroundServiceType="location"
+            android:label="BackgroundLoggingService" />
+        <service
             android:name=".WatchMessageListenerService"
             android:enabled="true"
             android:exported="true">
             <intent-filter>
-                <action android:name="com.google.android.gms.wearable.BIND_LISTENER"
+                <action
+                    android:name="com.google.android.gms.wearable.BIND_LISTENER"
                     tools:ignore="WearableBindListener" />
             </intent-filter>
         </service>
