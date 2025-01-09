@@ -557,6 +557,8 @@ class MainActivity: AppCompatActivity() {
                             GlobalNotification().showAlertDialog(
                                 context, "File Corruption Detected", "The file appears to be corrupted during transfer."
                             )
+
+                            renameFile(checkFile, isCorrupted = true)
                         }
                     } catch (e: Exception) {
                         Log.e("verifyChecksum", "Error verifying checksum: ${e.message}")
@@ -573,7 +575,7 @@ class MainActivity: AppCompatActivity() {
                     // it would be optimal to have a way to synchronously wait for the file transfer to be complete
                     // and only after that do the file checksum checking and only after that do the file renaming
                     // all in a specific function
-                    renameFile(checkFile)
+                    renameFile(checkFile, isCorrupted = false)
 
                 } else {
                     Log.w(
@@ -590,12 +592,18 @@ class MainActivity: AppCompatActivity() {
 
     // ---------------------------------------------------------------------------------------------
 
-    private fun renameFile(renameFile: File) {
+    private fun renameFile(renameFile: File, isCorrupted: Boolean = false) {
         // renames the file to be the same as the file name on the watch
         synchronized(fileAccessLock) {
             if (receivedFileName != null) {
                 val downloadsDir = applicationContext.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)
-                val originalFile = File(downloadsDir, receivedFileName!!)
+
+                val finalName = if (isCorrupted) {
+                    "(corrupted)${receivedFileName!!}"
+                } else {
+                    receivedFileName!!
+                }
+                val originalFile = File(downloadsDir, finalName)
                 val success = renameFile.renameTo(originalFile)
                 if (success) {
                     Log.d("fileRenameReceive", "rename success! File renamed to $receivedFileName")

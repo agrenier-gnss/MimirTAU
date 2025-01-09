@@ -1,6 +1,5 @@
 package com.mobilewizards.logging_app
 
-import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.icu.text.SimpleDateFormat
@@ -26,18 +25,22 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
+import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import java.io.FileOutputStream
 import java.io.IOException
 import java.io.InputStream
 import java.security.MessageDigest
 
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 private const val COMMENT_START = "#"
 
 
-class SendSurveysActivity: Activity() {
+class SendSurveysActivity: AppCompatActivity() {
 
     private lateinit var binding: ActivitySendSurveysBinding
     private val TAG = "watchLogger"
@@ -68,17 +71,19 @@ class SendSurveysActivity: Activity() {
 
         // File send to phone button
         filesAdapter.onFileSendClick = { fileItem ->
+            lifecycleScope.launch {
+                getPhoneNodeId { nodeId ->
+                    // Check if there are connected nodes
+                    if (nodeId.isNullOrEmpty()) {
+                        // No connection
+                        Toast.makeText(this@SendSurveysActivity, "Phone not connected", Toast.LENGTH_SHORT).show()
+                    } else {
+                        // there is a phone connection
+                        fileSendConfirmationPopup(fileItem, nodeId)
 
-            getPhoneNodeId { nodeId ->
-                // Check if there are connected nodes
-                if (nodeId.isNullOrEmpty()) {
-                    // No connection
-                    Toast.makeText(this, "Phone not connected", Toast.LENGTH_SHORT).show()
-                } else {
-                    // there is a phone connection
-                    fileSendConfirmationPopup(fileItem)
+                    }
                 }
-            }
+                }
 
         }
 
@@ -101,7 +106,7 @@ class SendSurveysActivity: Activity() {
     }
 
     // =============================================================================================
-    private fun fileSendConfirmationPopup(file: File) {
+    private fun fileSendConfirmationPopup(file: File, nodeId: String) {
         // popup screen for confirming file sending to the phone
         val dialogView = LayoutInflater.from(this).inflate(R.layout.file_action_dialog_confirmation, null)
         val builder = AlertDialog.Builder(this).setView(dialogView)
@@ -112,20 +117,29 @@ class SendSurveysActivity: Activity() {
         dialogView.findViewById<TextView>(R.id.dialog_message).text =
             "Are you sure you want to send the file to phone:\n${file.nameWithoutExtension}?"
 
-        // Setting the confirm button to show file sending icon
         val confirmSendButton = dialogView.findViewById<ImageButton>(R.id.btn_confirm)
         confirmSendButton.apply {
             setBackgroundResource(R.drawable.blue_circular_button_background)
             setImageResource(R.drawable.upload)
         }
 
-        // confirm button
-        dialogView.findViewById<ImageButton>(R.id.btn_confirm).setOnClickListener {
-            // file transfer confirmed
-            sendFiles(file)
+        confirmSendButton.setOnClickListener {
+            val sendingToast = Toast.makeText(
+                this@SendSurveysActivity,
+                "Transfer starting\n" +
+                        "Please wait...",
+                Toast.LENGTH_LONG
+            )
+            val textView = sendingToast.view?.findViewById<TextView>(android.R.id.message)
+            textView?.textSize = 5f
+            sendingToast?.show()
+
+            lifecycleScope.launch {
+                sendFiles(file, nodeId)
+                sendingToast?.cancel()
+            }
             dialog.dismiss()
         }
-
         // cancel button
         dialogView.findViewById<Button>(R.id.btn_cancel).setOnClickListener {
             // cancelled
@@ -203,7 +217,7 @@ class SendSurveysActivity: Activity() {
     // =============================================================================================
 
 
-    private fun generateCsvFile(file: File): File {
+    private suspend fun generateCsvFile(file: File): File = withContext(Dispatchers.IO) {
         // generates a CSV file in a temporary directory from a survey and returns the File object
 
         val originalName = file.nameWithoutExtension
@@ -227,7 +241,7 @@ class SendSurveysActivity: Activity() {
 
             // Read the input file in chunks and write to the output file
             file.inputStream().buffered().use { inputStream ->
-                val buffer = ByteArray(8192) // 8 KB buffer size
+                val buffer = ByteArray(256 * 1024) // 256 KB buffer size
                 var bytesRead: Int
                 while (inputStream.read(buffer).also { bytesRead = it } != -1) {
                     outputStream.write(buffer, 0, bytesRead)
@@ -238,31 +252,31 @@ class SendSurveysActivity: Activity() {
         }
 
         Log.d("File path", "temporary file created in ${tempFile.absolutePath}")
-        return tempFile
+        return@withContext tempFile
     }
 
 
     // =============================================================================================
 
-    private fun sendFiles(file: File) {
-        getPhoneNodeId { nodeId ->
-            Log.d(TAG, "Received nodeId: $nodeId")
-            // Check if there are connected nodes
-            if (nodeId.isNullOrEmpty()) {
-                Log.d(TAG, "no nodes found")
-                Toast.makeText(this, "Phone not connected", Toast.LENGTH_SHORT).show()
-                return@getPhoneNodeId
+    private suspend fun sendFiles(file: File, nodeId: String) = withContext(Dispatchers.Main) {
 
-            }
-
-            // successful connection
-            Log.d(TAG, "nodes found, sending file: $file")
-
-            val tempFile = generateCsvFile(file)
-            sendCsvFileToPhone(tempFile, nodeId, this)
-
+        if (nodeId.isEmpty()) {
+            Toast.makeText(this@SendSurveysActivity, "Phone not connected", Toast.LENGTH_SHORT)
+                .show()
+            return@withContext
         }
+
+        Log.d(TAG, "nodes found, sending file: $file")
+
+        // Generate CSV on IO thread
+        val tempFile = withContext(Dispatchers.IO) {
+            generateCsvFile(file)
+        }
+
+        // Actually send the file over the channel (network I/O)
+        sendCsvFileToPhone(tempFile, nodeId, this@SendSurveysActivity)
     }
+
 
     // =============================================================================================
 
@@ -314,66 +328,35 @@ class SendSurveysActivity: Activity() {
     // =============================================================================================
 
     private fun sendCsvFileToPhone(tempFile: File, nodeId: String, context: Context) {
-        Log.d(TAG, "in sendCsvFileToPhone ${tempFile.name}")
-        // Checks if the file is found and read
-//        try {
-//            val bufferedReader = BufferedReader(FileReader(csvFile))
-//            var line: String? = bufferedReader.readLine()
-//            while (line != null) {
-//                line = bufferedReader.readLine()
-//            }
-//            bufferedReader.close()
-//        } catch (e: Exception) {
-//            e.printStackTrace()
-//        }
 
-        // Generate the checksum for the file
         val checksum = generateChecksum(tempFile.inputStream())
         Log.d(TAG, "File checksum: $checksum")
 
-        // Create a temporary file to hold chunks (use temporary directory)
-        val cacheFile = File(context.cacheDir, "temp_chunked_file.csv")
+        val channelClient = Wearable.getChannelClient(context)
+        val callback = object : ChannelClient.ChannelCallback() {
+            override fun onChannelOpened(channel: ChannelClient.Channel) {
+                Log.d(TAG, "onChannelOpened ${channel.nodeId}")
+                val fileByteSize = tempFile.length().toString()
 
-        try {
-            // Stream file into temporary chunked file
-            FileOutputStream(cacheFile).use { outputStream ->
-                val buffer = ByteArray(262144) // 256 KB buffer
-                tempFile.inputStream().use { inputStream ->
-                    var bytesRead: Int
-                    while (inputStream.read(buffer).also { bytesRead = it } != -1) {
-                        outputStream.write(buffer, 0, bytesRead)
+                // sending file size first
+                sendFileSizeToPhone(fileByteSize, nodeId, context)
+
+                channelClient.sendFile(channel, tempFile.toUri()).addOnCompleteListener { task ->
+                    if (task.isSuccessful) {
+                        sendFileNameToPhone(tempFile.name, nodeId, context)
+                        sendChecksumToPhone(checksum, nodeId, context)
+                        WatchActivityHandler.fileSendStatus(true)
+                    } else {
+                        Log.e(TAG, "Error with file sending " + task.exception.toString())
+                        WatchActivityHandler.fileSendStatus(false)
                     }
+
+                    val openSendInfo = Intent(applicationContext, FileSendActivity::class.java)
+                    startActivity(openSendInfo)
+                    finish()
+                    channelClient.close(channel)
                 }
             }
-            val channelClient = Wearable.getChannelClient(context)
-            val callback = object: ChannelClient.ChannelCallback() {
-                override fun onChannelOpened(channel: ChannelClient.Channel) {
-                    Log.d(TAG, "onChannelOpened ${channel.nodeId}")
-                    val fileByteSize = tempFile.length().toString()
-
-                    // sending file size before starting to send file
-                    sendFileSizeToPhone(fileByteSize, nodeId, context)
-
-                    channelClient.sendFile(channel, cacheFile.toUri()).addOnCompleteListener { task ->
-                        if (task.isSuccessful) {
-
-                            // will display that file was sent successfully even if the checksum or file name send fail
-                            // but pausing the watchlogger for potentially a minute to see if everything was sent well
-                            // isn't really an option
-                            sendFileNameToPhone(tempFile.name, nodeId, context)
-                            sendChecksumToPhone(checksum, nodeId, context)
-                            WatchActivityHandler.fileSendStatus(true)
-                        } else {
-                            Log.e(TAG, "Error with file sending " + task.exception.toString())
-                            WatchActivityHandler.fileSendStatus(false)
-                        }
-
-                        val openSendInfo = Intent(applicationContext, FileSendActivity::class.java)
-                        startActivity(openSendInfo)
-                        finish()
-                        channelClient.close(channel)
-                    }
-                }
 
                 override fun onChannelClosed(
                     channel: ChannelClient.Channel, closeReason: Int, appSpecificErrorCode: Int
@@ -383,44 +366,25 @@ class SendSurveysActivity: Activity() {
                     )
                     Wearable.getChannelClient(applicationContext).close(channel)
 
-                    // delete temporary files when channel closed
-                    val cacheDeleted = cacheFile.delete()
-
-                    if (cacheDeleted) {
-                        Log.d(TAG, "Cache file deleted: ${tempFile.name}")
-                    } else {
-                        Log.w(TAG, "Failed to delete cache file: ${tempFile.name}")
-                    }
-
-                    val tempDeleted = tempFile.delete()
-
-                    if (tempDeleted) {
+                    val deleted = tempFile.delete()
+                    if (deleted) {
                         Log.d(TAG, "Temporary file deleted: ${tempFile.name}")
                     } else {
                         Log.w(TAG, "Failed to delete temporary file: ${tempFile.name}")
                     }
-                }
             }
+        }
 
-            channelClient.registerChannelCallback(callback)
-            channelClient.openChannel(
-                nodeId, CSV_FILE_CHANNEL_PATH.toString()
-            ).addOnCompleteListener { result ->
-                Log.d(TAG, result.toString())
-                if (result.isSuccessful) {
-                    Log.d(TAG, "Channel opened: nodeId=$nodeId, path=$CSV_FILE_CHANNEL_PATH")
-                    callback.onChannelOpened(result.result)
-                } else {
-                    Log.e(
-                        TAG, "Failed to open channel: nodeId=$nodeId, path=$CSV_FILE_CHANNEL_PATH"
-                    )
-                    channelClient.unregisterChannelCallback(callback)
-                    cacheFile.delete()
-                    tempFile.delete()
-                }
+        channelClient.registerChannelCallback(callback)
+        channelClient.openChannel(nodeId, CSV_FILE_CHANNEL_PATH.toString()).addOnCompleteListener { result ->
+            if (result.isSuccessful) {
+                Log.d(TAG, "Channel opened: nodeId=$nodeId, path=$CSV_FILE_CHANNEL_PATH")
+                callback.onChannelOpened(result.result)
+            } else {
+                Log.e(TAG, "Failed to open channel: nodeId=$nodeId, path=$CSV_FILE_CHANNEL_PATH")
+                channelClient.unregisterChannelCallback(callback)
+                tempFile.delete()
             }
-        } catch (e: Exception) {
-            Log.e(TAG, "Error while processing file: ${e.message}")
         }
     }
 
