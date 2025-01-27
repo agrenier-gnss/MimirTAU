@@ -76,7 +76,7 @@ class SettingsActivity: Activity() {
         // TODO: this is commented out only because the feature is not fully implemented,
         // Also a block is commented out in the activity_setting.xml for turning the feature on
 
-        // Work in progress background recording
+        // Work in progress background recording / periodic recording
         // Disabled since it still has few issues to solve
         // it doesn't truly work in the background yet, so when the app is closed it doesn't record.
         //

@@ -275,7 +275,7 @@
                 android:background="?android:attr/listDivider" />
 
             <!--
-            Work in progress background recording
+            Work in progress background recording / periodic recording
             Disabled since it still has few issues to solve
             it doesn't truly work in the background yet, so when the app is closed it doesn't record.
 
@@ -321,7 +321,7 @@
 
             <!-- Remove visibility gone when working with background logging-->
             <View
-                
+
                 android:visibility="gone"
 
                 android:id="@+id/divider4"
