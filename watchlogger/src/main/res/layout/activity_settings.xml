@@ -289,8 +289,14 @@
             Background logging tasks are largely in the LoggingWorker and ScheduleManager, look into them
             for more info
 
+            Remove the visibility: "gone" from the items when working on background logging
+            -->
 
+            <!-- Remove visibility gone when working with background logging-->
             <TextView
+
+                android:visibility="gone"
+
                 android:id="@+id/periodic_recording_text"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -302,19 +308,27 @@
                 android:textSize="14sp" />
 
 
+            <!-- Remove visibility gone when working with background logging-->
             <Switch
+
+                android:visibility="gone"
+
                 android:id="@+id/switch_periodic_recording"
                 android:layout_width="130dp"
                 android:layout_height="wrap_content"
                 android:textColor="@color/fontWhite"
                 tools:ignore="UseSwitchCompatOrMaterialXml" />
 
+            <!-- Remove visibility gone when working with background logging-->
             <View
+                
+                android:visibility="gone"
+
                 android:id="@+id/divider4"
                 android:layout_width="match_parent"
                 android:layout_height="2dp"
                 android:background="?android:attr/listDivider" />
-             -->
+
 
             <Button
                 android:id="@+id/button_save"

@@ -93,26 +93,26 @@ class SettingsActivity: Activity() {
         // TODO: remove the code from comment block when working on background recording again
 
 
-        //val togglePeriodicRecording = findViewById<Switch>(R.id.switch_periodic_recording)
+        val togglePeriodicRecording = findViewById<Switch>(R.id.switch_periodic_recording)
 
         // recover toggle
-        //          val sharedPreferences = getSharedPreferences("AppPreferences", MODE_PRIVATE)
-        //          togglePeriodicRecording.isChecked = sharedPreferences.getBoolean("isPeriodicRecordingEnabled", false)
+        val sharedPreferences = getSharedPreferences("AppPreferences", MODE_PRIVATE)
+        togglePeriodicRecording.isChecked = sharedPreferences.getBoolean("isPeriodicRecordingEnabled", false)
 
         btnSave.setOnClickListener {
             saveSettings()
-            //          turn on/off based on the status of toggle
-            //          if (togglePeriodicRecording.isChecked) {
-            //              SchedulerManager.schedulePeriodicLogging(this)
-            //              Toast.makeText(this, "Background recording enabled.", Toast.LENGTH_SHORT).show()
-            //          } else {
-            //              WorkManager.getInstance(this).cancelUniqueWork("SensorLoggingWork")
-            //              Toast.makeText(this, "Background recording disabled.", Toast.LENGTH_SHORT).show()
-            //          }
-            //          // save toggle status to SharedPreferences
-            //          val editor = sharedPreferences.edit()
-            //          editor.putBoolean("isPeriodicRecordingEnabled", togglePeriodicRecording.isChecked)
-            //          editor.apply()
+            // turn on/off based on the status of background logging toggle
+            if (togglePeriodicRecording.isChecked) {
+                SchedulerManager.schedulePeriodicLogging(this)
+                Toast.makeText(this, "Background recording enabled.", Toast.LENGTH_SHORT).show()
+            } else {
+                WorkManager.getInstance(this).cancelUniqueWork("SensorLoggingWork")
+                Toast.makeText(this, "Background recording disabled.", Toast.LENGTH_SHORT).show()
+            }
+            // save background toggle status to SharedPreferences
+            val editor = sharedPreferences.edit()
+            editor.putBoolean("isPeriodicRecordingEnabled", togglePeriodicRecording.isChecked)
+            editor.apply()
 
             setResult(RESULT_OK)
             finish() // Close activity
