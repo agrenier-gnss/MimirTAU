@@ -274,6 +274,22 @@
                 android:layout_height="4dp"
                 android:background="?android:attr/listDivider" />
 
+            <!--
+            Work in progress background recording
+            Disabled since it still has few issues to solve
+            it doesn't truly work in the background yet, so when the app is closed it doesn't record.
+
+            It lacks some configurations, Currently it's hard coded to log for 60s every 15min
+            but in the state it is now, it doesn't repeat, it only records for the 60s and does not
+            go to new recording cycle.
+
+            Also the feature is obscure enough to need documentation for the user, it's not as
+            self explanatory as  the rest of the features.
+
+            Background logging tasks are largely in the LoggingWorker and ScheduleManager, look into them
+            for more info
+
+
             <TextView
                 android:id="@+id/periodic_recording_text"
                 android:layout_width="match_parent"
@@ -281,9 +297,10 @@
                 android:layout_marginTop="5dp"
                 android:layout_marginBottom="5dp"
                 android:gravity="center"
-                android:text="@string/str_periodic_recording"
+                android:text="periodic_recording\n(Work in progress)"
                 android:textColor="@color/fontWhite"
                 android:textSize="14sp" />
+
 
             <Switch
                 android:id="@+id/switch_periodic_recording"
@@ -297,6 +314,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="2dp"
                 android:background="?android:attr/listDivider" />
+             -->
 
             <Button
                 android:id="@+id/button_save"
