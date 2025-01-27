@@ -10,6 +10,24 @@ import com.mimir.sensors.BackgroundLoggingService
 import com.mimir.sensors.SensorType
 import java.io.Serializable
 
+
+// Currently hidden in the layout XML
+// TODO: this is commented out only because the feature is not fully implemented,
+
+// Work in progress background recording / periodic recording
+// Disabled since it still has few issues to solve
+// it doesn't truly work in the background yet, so when the app is closed it doesn't record.
+//
+// It lacks some configurations, Currently it's hard coded to log for 60s every 15min
+// but in the state it is now, it doesn't repeat, it only records for the 60s and does not
+// go to new recording cycle.
+//
+// Also the feature is obscure enough to need documentation for the user, it's not as
+// self explanatory as  the rest of the features.
+//
+// Background logging tasks are largely in the LoggingWorker and ScheduleManager, look into them
+// for more info
+
 class LoggingWorker(
     context: Context, workerParams: WorkerParameters
 ): Worker(context, workerParams) {
