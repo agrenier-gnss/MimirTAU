@@ -11,6 +11,7 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
+import android.util.Log
 import android.view.View
 import android.view.WindowManager
 import android.widget.Button
@@ -20,50 +21,61 @@ import androidx.core.content.ContextCompat
 import com.mimir.sensors.LoggingService
 import com.mimir.sensors.SensorType
 import com.mobilewizards.logging_app.databinding.ActivityLoggingBinding
-import com.mobilewizards.watchlogger.WatchActivityHandler
+import com.mobilewizards.watchlogger.SensorSettingsHandler
 import java.io.Serializable
+import java.util.concurrent.TimeUnit
 
 var startTime: Long = 0
 
 // =================================================================================================
 
-class LoggingActivity : Activity() {
+// Class for main screen UI and activity when logging data
+class LoggingActivity: Activity() {
 
     private lateinit var binding: ActivityLoggingBinding
 
     private val durationHandler = Handler()
 
     // Logging service
-    lateinit var loggingIntent : Intent
+    private lateinit var loggingIntent: Intent
 
     // Components
-    private lateinit var startLogBtn : Button
-    private lateinit var stopLogBtn  : Button
-    private lateinit var logText     : TextView
-    private lateinit var logTimeText : TextView
+    private lateinit var startLogBtn: Button
+    private lateinit var stopLogBtn: Button
+    private lateinit var logText: TextView
+    private lateinit var logTimeText: TextView
 
     private var sensorTextViewList = mutableMapOf<SensorType, TextView>()
 
     // ---------------------------------------------------------------------------------------------
 
-    private val sensorCheckReceiver = object : BroadcastReceiver() {
+    private val sensorCheckReceiver = object: BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             if (intent?.action == "SENSOR_CHECK_UPDATE") {
 
-                sensorTextViewList.forEach{ entry ->
-                    if(!intent.hasExtra("${entry.key}")){
+                // Lists all the sensors in the survey screen and adds enabled / disabled symbols to them
+                sensorTextViewList.forEach { entry ->
+                    if (!intent.hasExtra("${entry.key}")) {
                         return@forEach
                     }
+
+                    // gets what sensors are enabled
                     val sensorCheck = intent.getBooleanExtra("${entry.key}", false)
-                    if(sensorCheck){
-                        val colorID = ContextCompat.getColor(applicationContext,
-                            android.R.color.holo_green_light)
-                        entry.value.text = "\u2714"
+                    val checkmarkSymbol = "\u2714"
+                    val crossSymbol = "\u2716"
+
+                    // set the sensor green check if enabled or red cross if disabled
+                    if (sensorCheck) {
+                        val colorID = ContextCompat.getColor(
+                            applicationContext, android.R.color.holo_green_light
+                        )
+                        entry.value.text = checkmarkSymbol
                         entry.value.setTextColor(colorID)
-                    }else{
-                        val colorID = ContextCompat.getColor(applicationContext,
-                            android.R.color.holo_red_light)
-                        entry.value.text = "\u2716"
+                    } else {
+                        val colorID = ContextCompat.getColor(
+                            applicationContext, android.R.color.holo_red_light
+                        )
+                        entry.value.text = crossSymbol
                         entry.value.setTextColor(colorID)
                     }
                 }
@@ -85,8 +97,8 @@ class LoggingActivity : Activity() {
 
         // Set views
         startLogBtn = findViewById(R.id.startLogBtn)
-        stopLogBtn  = findViewById(R.id.stopLogBtn)
-        logText     = findViewById(R.id.logInfoText)
+        stopLogBtn = findViewById(R.id.stopLogBtn)
+        logText = findViewById(R.id.logInfoText)
         logTimeText = findViewById(R.id.logTimeText)
         startLogBtn.visibility = View.VISIBLE
         stopLogBtn.visibility = View.GONE
@@ -94,38 +106,38 @@ class LoggingActivity : Activity() {
         logTimeText.visibility = View.GONE
 
         sensorTextViewList = mutableMapOf(
-            SensorType.TYPE_GNSS_MEASUREMENTS           to findViewById(R.id.tv_gnss_raw_check),
-            SensorType.TYPE_GNSS_LOCATION               to findViewById(R.id.tv_gnss_pos_check),
-            SensorType.TYPE_GNSS_MESSAGES               to findViewById(R.id.tv_gnss_nav_check),
-            SensorType.TYPE_ACCELEROMETER               to findViewById(R.id.tv_imu_acc_check),
-            SensorType.TYPE_ACCELEROMETER_UNCALIBRATED  to findViewById(R.id.tv_imu_acc_check),
-            SensorType.TYPE_GYROSCOPE                   to findViewById(R.id.tv_imu_gyr_check),
-            SensorType.TYPE_GYROSCOPE_UNCALIBRATED      to findViewById(R.id.tv_imu_gyr_check),
-            SensorType.TYPE_MAGNETIC_FIELD              to findViewById(R.id.tv_imu_mag_check),
+            SensorType.TYPE_GNSS_MEASUREMENTS to findViewById(R.id.tv_gnss_raw_check),
+            SensorType.TYPE_GNSS_LOCATION to findViewById(R.id.tv_gnss_pos_check),
+            SensorType.TYPE_GNSS_MESSAGES to findViewById(R.id.tv_gnss_nav_check),
+            SensorType.TYPE_ACCELEROMETER to findViewById(R.id.tv_imu_acc_check),
+            SensorType.TYPE_ACCELEROMETER_UNCALIBRATED to findViewById(R.id.tv_imu_acc_check),
+            SensorType.TYPE_GYROSCOPE to findViewById(R.id.tv_imu_gyr_check),
+            SensorType.TYPE_GYROSCOPE_UNCALIBRATED to findViewById(R.id.tv_imu_gyr_check),
+            SensorType.TYPE_MAGNETIC_FIELD to findViewById(R.id.tv_imu_mag_check),
             SensorType.TYPE_MAGNETIC_FIELD_UNCALIBRATED to findViewById(R.id.tv_imu_mag_check),
-            SensorType.TYPE_PRESSURE                    to findViewById(R.id.tv_baro_check),
-            SensorType.TYPE_STEP_DETECTOR               to findViewById(R.id.tv_steps_detect_check),
-            SensorType.TYPE_STEP_COUNTER                to findViewById(R.id.tv_steps_counter_check),
-            SensorType.TYPE_SPECIFIC_ECG                to findViewById(R.id.tv_ecg_check),
-            SensorType.TYPE_SPECIFIC_PPG                to findViewById(R.id.tv_ppg_check),
-            SensorType.TYPE_SPECIFIC_GSR                to findViewById(R.id.tv_gsr_check)
+            SensorType.TYPE_PRESSURE to findViewById(R.id.tv_baro_check),
+            SensorType.TYPE_STEP_DETECTOR to findViewById(R.id.tv_steps_detect_check),
+            SensorType.TYPE_STEP_COUNTER to findViewById(R.id.tv_steps_counter_check),
+            SensorType.TYPE_SPECIFIC_ECG to findViewById(R.id.tv_ecg_check),
+            SensorType.TYPE_SPECIFIC_PPG to findViewById(R.id.tv_ppg_check),
+            SensorType.TYPE_SPECIFIC_GSR to findViewById(R.id.tv_gsr_check)
         )
 
         // Set service
         loggingIntent = Intent(this, LoggingService::class.java)
 
-        // starts logging
-        startLogBtn.setOnClickListener{
+        // starts logging if start button is clicked
+        startLogBtn.setOnClickListener {
             startLogging(this)
         }
 
-        // stops logging
-        stopLogBtn.setOnClickListener{
+        // stops logging if stop button is clicked
+        stopLogBtn.setOnClickListener {
             stopLogging()
         }
 
-        // Register broadcoaster
-        registerReceiver(sensorCheckReceiver, IntentFilter("SENSOR_CHECK_UPDATE"), RECEIVER_NOT_EXPORTED)
+        // Register broadcaster
+        registerReceiver(sensorCheckReceiver, IntentFilter("SENSOR_CHECK_UPDATE"), RECEIVER_EXPORTED)
 
 //        // Initialize the variable sensorManager
 //        val sensorManager = getSystemService(SENSOR_SERVICE) as SensorManager
@@ -139,7 +151,7 @@ class LoggingActivity : Activity() {
 
     // ---------------------------------------------------------------------------------------------
 
-    fun startLogging(context: Context){
+    private fun startLogging(context: Context) {
 
         // Set duration timer
         startTime = SystemClock.elapsedRealtime()
@@ -153,8 +165,13 @@ class LoggingActivity : Activity() {
         logText.text = "Surveying..."
         logTimeText.visibility = View.VISIBLE
 
+
+        val sensorsSelected = SensorSettingsHandler.loadSensorValues()
+
+        Log.d("sensors", "$sensorsSelected")
+
         // Set the data to be sent to service
-        loggingIntent.putExtra("settings", WatchActivityHandler.sensorsSelected as Serializable)
+        loggingIntent.putExtra("settings", sensorsSelected as Serializable)
 
         // Start service
         ContextCompat.startForegroundService(this, loggingIntent)
@@ -162,12 +179,11 @@ class LoggingActivity : Activity() {
 
     // ---------------------------------------------------------------------------------------------
 
-    fun stopLogging(){
+    private fun stopLogging() {
 
         stopLogBtn.visibility = View.GONE
         logTimeText.visibility = View.GONE
         logText.text = "Survey ended"
-
         // Stop logging service
         stopService(loggingIntent)
 
@@ -179,7 +195,8 @@ class LoggingActivity : Activity() {
 
     // ---------------------------------------------------------------------------------------------
 
-    fun checkPermissions() {
+    // Makes sure all permissions are granted
+    private fun checkPermissions() {
         val permissions = arrayOf(
             Manifest.permission.ACCESS_FINE_LOCATION,
             Manifest.permission.ACCESS_COARSE_LOCATION,
@@ -204,6 +221,7 @@ class LoggingActivity : Activity() {
             }
         }
 
+
         if (!allPermissionsGranted) {
             ActivityCompat.requestPermissions(this, permissions, 225)
         }
@@ -211,7 +229,8 @@ class LoggingActivity : Activity() {
 
     // ---------------------------------------------------------------------------------------------
 
-    private val updateRunnableDuration = object : Runnable {
+    // Calls the clock text to be updated every second
+    private val updateRunnableDuration = object: Runnable {
         override fun run() {
             // Update the duration text every second
             updateDurationText()
@@ -221,19 +240,20 @@ class LoggingActivity : Activity() {
         }
     }
 
+    // updates the text on the clock
     private fun updateDurationText() {
         // Calculate the elapsed time since the button was clicked
-        val currentTime = SystemClock.elapsedRealtime()
-        val elapsedTime = currentTime - startTime
+        val elapsedTime = SystemClock.elapsedRealtime() - startTime
 
         // Format the duration as HH:MM:SS
-        val hours = (elapsedTime / 3600000).toInt()
-        val minutes = ((elapsedTime % 3600000) / 60000).toInt()
-        val seconds = ((elapsedTime % 60000) / 1000).toInt()
+        val hours = TimeUnit.MILLISECONDS.toHours(elapsedTime)
+        val minutes = TimeUnit.MILLISECONDS.toMinutes(elapsedTime) % 60
+        val seconds = TimeUnit.MILLISECONDS.toSeconds(elapsedTime) % 60
 
         // Display the formatted duration in the TextView
         val durationText = String.format("%02d:%02d:%02d", hours, minutes, seconds)
-        logTimeText.text = "$durationText"
+
+        logTimeText.text = durationText
     }
 
     override fun onDestroy() {

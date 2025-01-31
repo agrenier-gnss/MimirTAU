@@ -190,15 +190,26 @@
                 app:layout_constraintLeft_toLeftOf="parent"
                 app:layout_constraintTop_toBottomOf="parent"
                 app:shapeAppearance="@style/TextAppearance"/>
-
-            <androidx.appcompat.widget.AppCompatImageButton
+            <ImageButton
+                android:id="@+id/decline_button"
+                android:layout_width="30dp"
+                android:layout_height="30dp"
+                android:background="@drawable/button_background"
+                android:src="@drawable/ic_delete"
+            android:scaleType="centerInside"
+                android:layout_marginRight="16dp"
+            android:padding="4dp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent"/>
+ <!--          <androidx.appcompat.widget.AppCompatImageButton
                 android:id="@+id/decline_button"
                 android:layout_width="30dp"
                 android:layout_height="30dp"
                 android:layout_marginRight="27dp"
-                android:src="@drawable/ic_cross"
-                app:backgroundTint="@color/red"
-                app:tint="@color/lighter_black"/>
+                android:src="@drawable/ic_delete"
+                app:backgroundTint="@color/mauve"
+                app:tint="@color/lighter_black"/>-->
 
         </TableRow>
     </TableLayout>

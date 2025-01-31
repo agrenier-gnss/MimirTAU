@@ -1,18 +1,12 @@
 package com.mobilewizards.watchlogger
 
-import java.io.File
-import com.mimir.sensors.SensorType
-
 object WatchActivityHandler {
-
-    // Variable to save the files for sending
-    private var filepaths = mutableListOf<File>()
-    var fileSendOk : Boolean = false
-    var sensorsSelected = mutableMapOf<SensorType, Pair<Boolean, Int>>()
+    // keeps track of the most recently sent file status
+    private var fileSendOk: Boolean = false
 
     // ---------------------------------------------------------------------------------------------
 
-    fun fileSendStatus(fileSend: Boolean){
+    fun fileSendStatus(fileSend: Boolean) {
         fileSendOk = fileSend
     }
 
@@ -20,12 +14,6 @@ object WatchActivityHandler {
 
     fun checkFileSend(): Boolean {
         return fileSendOk
-    }
-
-    // ---------------------------------------------------------------------------------------------
-
-    fun getFilePaths(): List<File> {
-        return filepaths
     }
 
 }

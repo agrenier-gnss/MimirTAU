@@ -6,14 +6,16 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import com.mobilewizards.logging_app.databinding.ActivityLoadingScreenBinding
+import com.mobilewizards.watchlogger.SchedulerManager
 
-class LoadingScreenActivity : Activity() {
+class LoadingScreenActivity: Activity() {
 
     private lateinit var binding: ActivityLoadingScreenBinding
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
+        // initialize Scheduler Manager
+        //SchedulerManager.schedulePeriodicLogging(this)
         binding = ActivityLoadingScreenBinding.inflate(layoutInflater)
         setContentView(binding.root)
 

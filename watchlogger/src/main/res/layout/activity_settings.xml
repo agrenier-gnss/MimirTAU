@@ -11,8 +11,8 @@
     tools:deviceIds="wear">
 
     <ScrollView
-            android:layout_width="match_parent"
-            android:layout_height="match_parent">
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
 
         <LinearLayout
             android:id="@+id/activity_settings_layout"
@@ -57,14 +57,14 @@
                 android:layout_height="wrap_content"
                 android:checked="true"
                 android:text="@string/str_gnss"
-                android:textColor="@color/fontWhite" />
+                android:textColor="@color/fontWhite"
+                tools:ignore="UseSwitchCompatOrMaterialXml" />
 
             <TextView
                 android:id="@+id/settings_tv_gnss"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/str_gnss_rate" />
-
 
 
             <View
@@ -79,7 +79,8 @@
                 android:layout_height="wrap_content"
                 android:checked="false"
                 android:text="@string/str_imu"
-                android:textColor="@color/fontWhite" />
+                android:textColor="@color/fontWhite"
+                tools:ignore="UseSwitchCompatOrMaterialXml" />
 
             <TextView
                 android:id="@+id/settings_tv_imu"
@@ -110,7 +111,8 @@
                 android:layout_height="wrap_content"
                 android:checked="false"
                 android:text="@string/str_baro"
-                android:textColor="@color/fontWhite" />
+                android:textColor="@color/fontWhite"
+                tools:ignore="UseSwitchCompatOrMaterialXml" />
 
             <TextView
                 android:id="@+id/settings_tv_baro"
@@ -141,7 +143,8 @@
                 android:layout_height="wrap_content"
                 android:checked="false"
                 android:text="@string/str_steps"
-                android:textColor="@color/fontWhite" />
+                android:textColor="@color/fontWhite"
+                tools:ignore="UseSwitchCompatOrMaterialXml" />
 
             <TextView
                 android:id="@+id/settings_tv_step"
@@ -183,7 +186,8 @@
                 android:layout_width="130dp"
                 android:layout_height="wrap_content"
                 android:text="@string/str_ecg"
-                android:textColor="@color/fontWhite" />
+                android:textColor="@color/fontWhite"
+                tools:ignore="UseSwitchCompatOrMaterialXml" />
 
             <TextView
                 android:id="@+id/settings_tv_ecg"
@@ -213,7 +217,8 @@
                 android:layout_width="130dp"
                 android:layout_height="wrap_content"
                 android:text="@string/str_ppg"
-                android:textColor="@color/fontWhite" />
+                android:textColor="@color/fontWhite"
+                tools:ignore="UseSwitchCompatOrMaterialXml" />
 
             <TextView
                 android:id="@+id/settings_tv_ppg"
@@ -243,7 +248,8 @@
                 android:layout_width="130dp"
                 android:layout_height="wrap_content"
                 android:text="@string/str_gsr"
-                android:textColor="@color/fontWhite"/>
+                android:textColor="@color/fontWhite"
+                tools:ignore="UseSwitchCompatOrMaterialXml" />
 
             <TextView
                 android:id="@+id/settings_tv_gsr"
@@ -263,35 +269,78 @@
                 android:progress="3" />
 
             <View
+                android:id="@+id/divider11"
+                android:layout_width="match_parent"
+                android:layout_height="4dp"
+                android:background="?android:attr/listDivider" />
+
+            <!--
+            Work in progress background recording / periodic recording
+            Disabled since it still has few issues to solve
+            it doesn't truly work in the background yet, so when the app is closed it doesn't record.
+
+            It lacks some configurations, Currently it's hard coded to log for 60s every 15min
+            but in the state it is now, it doesn't repeat, it only records for the 60s and does not
+            go to new recording cycle.
+
+            Also the feature is obscure enough to need documentation for the user, it's not as
+            self explanatory as  the rest of the features.
+
+            Background logging tasks are largely in the LoggingWorker and ScheduleManager, look into them
+            for more info
+
+            Remove the visibility: "gone" from the items when working on background logging
+            -->
+
+            <!-- Remove visibility gone when working with background logging-->
+            <TextView
+
+                android:visibility="gone"
+
+                android:id="@+id/periodic_recording_text"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="5dp"
+                android:layout_marginBottom="5dp"
+                android:gravity="center"
+                android:text="periodic_recording\n(Work in progress)"
+                android:textColor="@color/fontWhite"
+                android:textSize="14sp" />
+
+
+            <!-- Remove visibility gone when working with background logging-->
+            <Switch
+
+                android:visibility="gone"
+
+                android:id="@+id/switch_periodic_recording"
+                android:layout_width="130dp"
+                android:layout_height="wrap_content"
+                android:textColor="@color/fontWhite"
+                tools:ignore="UseSwitchCompatOrMaterialXml" />
+
+            <!-- Remove visibility gone when working with background logging-->
+            <View
+
+                android:visibility="gone"
+
                 android:id="@+id/divider4"
                 android:layout_width="match_parent"
                 android:layout_height="2dp"
                 android:background="?android:attr/listDivider" />
 
-            <LinearLayout
-                android:layout_width="160dp"
-                android:layout_height="match_parent"
-                android:orientation="horizontal">
 
-                <Button
-                    android:id="@+id/button_save"
-                    style="@style/Widget.AppCompat.Button"
-                    android:layout_width="70dp"
-                    android:layout_height="60dp"
-                    android:text="@string/str_save"
-                    android:textSize="12sp" />
+            <Button
+                android:id="@+id/button_save"
+                style="@style/Widget.AppCompat.Button"
+                android:layout_width="120dp"
+                android:layout_height="60dp"
+                android:text="@string/str_save"
+                android:textSize="12sp" />
 
-                <Button
-                    android:id="@+id/button_default"
-                    android:layout_width="0dp"
-                    android:layout_height="60dp"
-                    android:layout_weight="1"
-                    android:text="@string/str_default"
-                    android:textAlignment="center"
-                    android:textSize="12sp" />
-            </LinearLayout>
+
         </LinearLayout>
-        </ScrollView>
+    </ScrollView>
 
 
 </androidx.wear.widget.BoxInsetLayout>

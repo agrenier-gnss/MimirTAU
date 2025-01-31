@@ -31,4 +31,8 @@
     <string name="str_imu">IMU</string>
     <string name="str_save">Save</string>
     <string name="str_default">Default</string>
+    <string name="ok">OK</string>
+    <string name="no_paired_smartphone_found_please_pair_with_the_device_before_proceeding">No paired smartphone found. Please pair with the device before proceeding.</string>
+    <string name="str_background">Background</string>
+    <string name="str_periodic_recording">Background Periodic Recording</string>
 </resources>

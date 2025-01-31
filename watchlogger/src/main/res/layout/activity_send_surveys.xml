@@ -10,7 +10,7 @@
     tools:context=".SendSurveysActivity"
     tools:deviceIds="wear">
 
-    <ScrollView
+    <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
         android:layout_height="match_parent">
 
@@ -18,7 +18,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:gravity="center"
-            android:orientation="vertical" >
+            android:orientation="vertical">
 
             <TextView
                 android:id="@+id/MimirText"
@@ -26,45 +26,46 @@
                 android:layout_height="wrap_content"
                 android:gravity="center"
                 android:layout_marginTop="15dp"
-                android:layout_marginBottom="5dp"
+                android:layout_marginBottom="10dp"
                 android:fontFamily="@font/montserrat_bold"
                 android:textColor="@color/fontLogo"
                 android:text="Mimir" />
 
             <TextView
                 android:id="@+id/SendToText"
-                android:layout_width="match_parent"
+                android:layout_width="165dp"
                 android:layout_height="wrap_content"
                 android:gravity="center"
-                android:layout_marginTop="10dp"
-                android:layout_marginBottom="15dp"
+                android:layout_marginBottom="10dp"
                 android:fontFamily="@font/montserrat_regular"
                 android:textColor="@color/fontWhite"
-                android:text="Send survey to" />
-            <Button
-                android:id="@+id/SendToPhoneBtn"
-                android:layout_width="140dp"
-                android:layout_height="50dp"
-                android:background="@drawable/button_background"
-                android:layout_marginBottom="15dp"
-                android:fontFamily="@font/montserrat_bold"
-                android:textAllCaps="false"
-                android:textColor="@color/fontBlack"
-                android:text="Phone" />
+                android:textSize="12sp"
+                android:text="Send surveys to phone or delete them from here" />
 
             <Button
-                android:id="@+id/SendToDrive"
+                android:id="@+id/surveyToMenuBtn"
                 android:layout_width="140dp"
                 android:layout_height="50dp"
-                android:layout_marginBottom="15dp"
+                android:layout_marginBottom="5dp"
                 android:background="@drawable/button_background"
                 android:fontFamily="@font/montserrat_bold"
-                android:text="Drive"
+                android:text="Back"
                 android:textAllCaps="false"
                 android:textColor="@color/fontBlack"
-                android:visibility="invisible" />
+                android:visibility="visible" />
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/filesRecyclerView"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:clipToPadding="false"
+                android:nestedScrollingEnabled="true"
+                android:padding="8dp"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent" />
 
         </LinearLayout>
-    </ScrollView>
+    </androidx.core.widget.NestedScrollView>
 
 </androidx.wear.widget.BoxInsetLayout>

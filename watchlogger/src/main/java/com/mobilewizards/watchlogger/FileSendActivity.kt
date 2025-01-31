@@ -1,32 +1,36 @@
 package com.mobilewizards.logging_app
 
 import android.app.Activity
+import android.content.Intent
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.view.View
 import android.widget.ImageView
 import android.widget.TextView
 import com.mobilewizards.watchlogger.WatchActivityHandler
 import com.mobilewizards.logging_app.databinding.ActivityFileSendBinding
 
-class FileSendActivity : Activity() {
+class FileSendActivity: Activity() {
 
     private lateinit var binding: ActivityFileSendBinding
 
+    // showing whether file was sent from watch to the phone successfully
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         binding = ActivityFileSendBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        var fileSuccessful = WatchActivityHandler.checkFileSend()
-        val logText =  findViewById<TextView>(R.id.logInfoText)
-        val logOkImage =  findViewById<ImageView>(R.id.imageOk)
+        val fileSuccessful = WatchActivityHandler.checkFileSend()
+        val logText = findViewById<TextView>(R.id.logInfoText)
+        val logOkImage = findViewById<ImageView>(R.id.imageOk)
         logOkImage.visibility = View.GONE
 
-        val logFailedImage =  findViewById<ImageView>(R.id.imageFailed)
+        val logFailedImage = findViewById<ImageView>(R.id.imageFailed)
         logFailedImage.visibility = View.GONE
 
-        if (fileSuccessful){
+        if (fileSuccessful) {
             logOkImage.visibility = View.VISIBLE
             logText.text = "Log successfully sent to device"
 
@@ -34,5 +38,16 @@ class FileSendActivity : Activity() {
             logFailedImage.visibility = View.VISIBLE
             logText.text = "Log upload failed"
         }
+
+        // return to the main menu after timer finished
+        Handler(Looper.getMainLooper()).postDelayed({
+            val intent = Intent(this, SendSurveysActivity::class.java)
+            startActivity(intent)
+            finish()
+        }, 4000)
+    }
+
+    override fun onBackPressed() {
+        // Override the back button press to do nothing
     }
 }
